@@ -1,6 +1,14 @@
 # executable-editor
 Quickly edit an executable script in your `$PATH`
 
+I found myself creating a lot of shell/ruby/python executable scripts and wanted
+to quickly edit them. I got tired of typing `vim $( which [FILE] )`, so I made a
+script that will do this for me. I gave it a few different options, such as
+`-a`, which can find all instances in your `PATH` and gives you the option to
+choose which one to edit, via the `select` loop. You can also choose your editor
+at runtime; otherwise, it will try to use the `VISUAL`, and then `EDITOR`
+environmental variables.
+
 # Installation
 Clone the repo.
 
@@ -12,24 +20,24 @@ Either add the `bin` to your `PATH`, move the file into your existing `PATH`, or
 create an alias.
 
 ```bash
-export PATH=INSTALLATION_PATH/bin:$PATH
+export PATH=$INSTALLATION_PATH/bin:$PATH
 # or
-mv INSTALLATION_PATH/bin/exed /usr/local/bin
+mv $INSTALLATION_PATH/bin/exed /usr/local/bin
 # or
-alias exed INSTALLATION_PATH/bin/exed
+alias exed $INSTALLATION_PATH/bin/exed
 ```
 
 Add the manual direcotry to your manpath.
 
 ```bash
-export MANPATH=$MANPATH:INSTALLATION_PATH/executable-editor/man
+export MANPATH=$MANPATH:$INSTALLATION_PATH/executable-editor/man
 ```
 
-In both instances, replace `INSTALLATION_PATH` with the correct path.
+In both instances, replace `$INSTALLATION_PATH` with the correct path.
 
 # Usage
-Once instaled, simply type `exed [EXECUTABLE FILE NAME]` to quickly edit an
-executable in your `PATH`.
+Once instaled, simply type `exed [EXECUTABLE_FILE_NAME]` to quickly edit an
+executable script in your `PATH`.
 
 For available options, run `exed -h`, or if you correctly installed the `man`
 page, run `man exed`.
