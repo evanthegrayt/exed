@@ -1,0 +1,37 @@
+.\" Manpage for exed
+
+.TH EXED 1 "October 2013" "exed 3.1" "Development Utility Manuals"
+.SH NAME
+\fBexed \fR\ Executable editor - Find executable files and open them in an editor
+.SH SYNOPSIS
+\fBexed \fR[\fIOPTIONS\fR]... \fPFILE
+.br
+\fBexed \fR[\fB\-ahu\fP] \fR[\fB\-e \fIEDITOR\fR] \fIFILE
+.SH DESCRIPTION
+\fBexed\fP will find the executable \fIFILE\fP in your path and automatically open it for you in \fPEDITOR\fP. If \fPEDITOR\fP is not provided, \fBenvironmental varialbes\fP will be used (if set). If neither are available, \fPexed\fP will default to \fPvim\fP.
+.SH OPTIONS
+.IP "\fB-f \fIFILE\fR"
+choose the name of the file to find and edit. \fPFILE\fP can either be called using the \fB\-f\fP option, or by it being the last parameter on the command line. The reason the \fI-f\fP option exists is to pass multiple files (\fI-f\fP can be used multiple times with different file names). NOTE: \fBexed\fP looks for \fPexecutables\fP, and they must be in your \fP$PATH\fP for \fPexed\fP to find them. It is worth noting that if you are trying to open source code (such as a ".c" file) or a ruby script that is not executable, \fPexed\fP will not be able to find it.
+.IP "\fB-a\fR"
+find \fBall\fR instances of the file and give you the choice of which one to edit. A file could have multiple copies (or links), \-OR\- if someone made a mistake, two different files could be named the same thing. The \fB-a\fP flag gives you the option to select which one you need.
+.IP "\fB-e \fIEDITOR\fR"
+choose which \fIEDITOR\fP to open \fPFILE\fP in. If \fPEDITOR\fP is not passed, \fBexed\fP will default to your \fP$VISUAL\fP or \fP$EDITOR\fP global variable (see \fPENVIRONMENTAL VARIABLE\fP section below). If these are not set, \fPexed\fP will default to \fPvim\fP.
+.IP "\fB-v\fR"
+\fBverbose\fR. If present, will display output, such as the editor the user has set and the location of the file being edited. If not set, \fBSTDERR\fP will still be printed.
+.IP "\fB-V\fR"
+Prints \fBversion\fP and exits.
+.IP "\fB-h"
+display short help and exit
+.IP "\fB-u"
+display usage
+.SH ENVIRONMENTAL VARIALBES
+If no \fIEDITOR\fP is passed as an argument, \fBexed\fP will check your \fPenvironmental variables\fP for either \fP$VISUAL\fP or \fP$EDITOR\fP to be set. You can set your default editor by adding \fPexport VISUAL=\fInano\fR (or whatever you prefer) to a blank line in a startup file (I.E.: your \fB~/.bashrc\fP). NOTE: bash will always try to use \fB$VISUAL\fP before \fP$EDITOR\fP, and therefor is the order \fPexed\fP uses.
+.SH ENVIRONMENT
+Deployable on most *nix\-based environments.
+.SH AUTHOR
+Written by Evan Gray.
+.SH REPORTING BUGS
+Report bugs to <\fIegray1985@gmail.com\fP>
+.SH COPYRIGHT
+Copyright (C) 2017, Evan Gray.  All rights reserved.  There is NO WARRANTY, to the extent permitted by law.
+

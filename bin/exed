@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Author:  Evan Gray
+# Version: 3.2
+
+print_help() {
+
+    cat <<____EOF
+
+    ======== ${0##*/} Help ========
+    -a: Will find all instances of [FILE] and ask which one to edit
+    -e: Editor (optional, will default to vim)
+    -v: Verbose. Will print output, such as \$EDITOR and file location
+    -V: Print version and exit.
+    -u: print usage
+    -h: print this help and exit
+
+    ========= Manual =========
+    \`man ${0##*/}' for full manual
+
+____EOF
+
+    exit
+
+}
+
+set_editor() {
+
+    if [[ -n "$VISUAL" ]]; then
+        echo "$VISUAL"
+    elif [[ -n "$EDITOR" ]]; then
+        echo "$EDITOR"
+    else
+        echo "vim"
+    fi
+
+}
+
+abort() {
+
+    local msg="${1:-'Exiting...'}"
+    local status=${2:-1}
+
+    echo "$msg"
+    exit $status
+
+}
+
+[[ -f ~/.${0##*/}rc ]] && source ~/.${0##*/}rc
+
+version="${0##*/} 3.2 (May 2017)"
+usage="USAGE: ${0##*/} [OPTIONS...] [EXECUTABLE_NAME]"
+verbose=${verbose:-false}
+all_in_path=${all_in_path:-false}
+
+while getopts "ae:huvV" opt 2>/dev/null; do
+    case $opt in
+        a)
+            all_in_path=true
+            ;;
+        e)
+            editor=$OPTARG
+            ;;
+        h)
+            print_help
+            ;;
+        u)
+            echo "$usage"
+            exit
+            ;;
+        v)
+            verbose=true
+            ;;
+        V)
+            echo $version
+            exit
+            ;;
+        *)
+            abort "$usage"
+            ;;
+    esac
+done
+shift $(( OPTIND - 1 ))
+
+[[ -n "$1" ]] && exe="$1" || abort "$usage"
+
+editor=${editor:-$( set_editor )}
+
+which "$editor" &>/dev/null || \
+    abort "Editor [$editor] is not found in your path!"
+
+declare -a fpath
+
+if $all_in_path; then
+    for file in $( which -a "$exe" 2>/dev/null ); do
+        [[ ! "${fpath[@]}" =~ (^|[^[:alpha:]])$file([^[:alpha:]]|$) ]] && \
+            fpath+=("$i")
+    done
+else
+    fpath=( $( which "$exe" 2>/dev/null ) )
+fi
+
+if (( ${#fpath[@]} == 0 )); then
+    abort "Executable [$exe] either does not exist, or is not in your path."
+elif (( ${#fpath[@]} > 1 )); then
+    PS3="Choose number of file to edit or Cancel: "
+    select number in ${fpath[@]} Cancel; do
+        case $number in
+            Cancel)
+                echo "Exiting..."
+                exit
+                ;;
+            *)
+                echo $number
+                if [[ -f "$number" ]]; then
+                    fpath="$number"
+                    break
+                else
+                    printf "Exiting..."
+                    exit
+                fi
+                ;;
+        esac
+    done
+fi
+
+if $verbose; then
+    echo "[${fpath##*/}] was found in [${fpath%/*}]. Opening in [$editor]"
+    sleep 1
+fi
+
+$editor "$fpath"
+
