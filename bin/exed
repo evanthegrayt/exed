@@ -3,7 +3,6 @@
 # Version: 3.2
 
 print_help() {
-
     cat <<____EOF
 
     ======== ${0##*/} Help ========
@@ -18,13 +17,10 @@ print_help() {
     \`man ${0##*/}' for full manual
 
 ____EOF
-
     exit
-
 }
 
 set_editor() {
-
     if [[ -n "$VISUAL" ]]; then
         echo "$VISUAL"
     elif [[ -n "$EDITOR" ]]; then
@@ -32,17 +28,14 @@ set_editor() {
     else
         echo "vim"
     fi
-
 }
 
 abort() {
-
     local msg="${1:-'Exiting...'}"
     local status=${2:-1}
 
     echo "$msg"
     exit $status
-
 }
 
 [[ -f ~/.${0##*/}rc ]] && source ~/.${0##*/}rc
