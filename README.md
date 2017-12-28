@@ -30,7 +30,7 @@ alias exed $INSTALLATION_PATH/bin/exed
 Add the manual direcotry to your manpath.
 
 ```bash
-export MANPATH=$MANPATH:$INSTALLATION_PATH/executable-editor/man
+export MANPATH=$MANPATH:$INSTALLATION_PATH/man
 ```
 
 In both instances, replace `$INSTALLATION_PATH` with the correct path.
