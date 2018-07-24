@@ -2,10 +2,14 @@
 # Author:  Evan Gray
 # Version: 3.2
 
+readonly PROGRAM_NAME=${0##*/}
+readonly VERSION="$PROGRAM_NAME 3.2 (May 2017)"
+readonly USAGE="USAGE: $PROGRAM_NAME [OPTIONS...] [EXECUTABLE_NAME]"
+
 print_help() {
     cat <<____EOF
 
-    ======== ${0##*/} Help ========
+    ======== $PROGRAM_NAME Help ========
     -a: Will find all instances of [FILE] and ask which one to edit
     -e: Editor (optional, will default to vim)
     -v: Verbose. Will print output, such as \$EDITOR and file location
@@ -14,7 +18,7 @@ print_help() {
     -h: print this help and exit
 
     ========= Manual =========
-    \`man ${0##*/}' for full manual
+    \`man $PROGRAM_NAME' for full manual
 
 ____EOF
     exit
@@ -38,17 +42,15 @@ abort() {
     exit $status
 }
 
-[[ -f ~/.${0##*/}rc ]] && source ~/.${0##*/}rc
+[[ -f ~/.${PROGRAM_NAME}rc ]] && source ~/.${PROGRAM_NAME}rc
 
-version="${0##*/} 3.2 (May 2017)"
-usage="USAGE: ${0##*/} [OPTIONS...] [EXECUTABLE_NAME]"
-verbose=${verbose:-false}
-all_in_path=${all_in_path:-false}
+: ${VERBOSE:=false}
+: ${ALL_IN_PATH:=false}
 
 while getopts "ae:huvV" opt 2>/dev/null; do
     case $opt in
         a)
-            all_in_path=true
+            ALL_IN_PATH=true
             ;;
         e)
             editor=$OPTARG
@@ -57,33 +59,36 @@ while getopts "ae:huvV" opt 2>/dev/null; do
             print_help
             ;;
         u)
-            echo "$usage"
+            echo "$USAGE"
             exit
             ;;
         v)
-            verbose=true
+            VERBOSE=true
             ;;
         V)
-            echo $version
+            echo $VERSION
             exit
             ;;
         *)
-            abort "$usage"
+            abort "$USAGE"
             ;;
     esac
 done
 shift $(( OPTIND - 1 ))
 
-[[ -n "$1" ]] && exe="$1" || abort "$usage"
+readonly VERBOSE
+readonly ALL_IN_PATH
 
-editor=${editor:-$( set_editor )}
+[[ -n "$1" ]] && exe="$1" || abort "$USAGE"
+
+: ${editor:=$( set_editor )}
 
 which "$editor" &>/dev/null || \
     abort "Editor [$editor] is not found in your path!"
 
 declare -a fpath
 
-if $all_in_path; then
+if $ALL_IN_PATH; then
     for file in $( which -a "$exe" 2>/dev/null ); do
         [[ ! "${fpath[@]}" =~ (^|[^[:alpha:]])$file([^[:alpha:]]|$) ]] && \
             fpath+=("$i")
@@ -116,7 +121,7 @@ elif (( ${#fpath[@]} > 1 )); then
     done
 fi
 
-if $verbose; then
+if $VERBOSE; then
     echo "[${fpath##*/}] was found in [${fpath%/*}]. Opening in [$editor]"
     sleep 1
 fi
