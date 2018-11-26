@@ -83,12 +83,10 @@ readonly ALL_IN_PATH
 
 : ${editor:=$( set_editor )}
 
-which "$editor" &>/dev/null || \
-    abort "Editor [$editor] is not found in your path!"
-
-declare -a fpath
+which "$editor" >/dev/null || abort "Editor [$editor] is not found in your path"
 
 if $ALL_IN_PATH; then
+    fpath=()
     for file in $( which -a "$exe" 2>/dev/null ); do
         [[ ! "${fpath[@]}" =~ (^|[^[:alpha:]])$file([^[:alpha:]]|$) ]] && \
             fpath+=("$i")
