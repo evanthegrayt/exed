@@ -9,7 +9,7 @@ choose which one to edit, via the `select` loop. You can also choose your editor
 at runtime; otherwise, it will try to use the `VISUAL`, and then `EDITOR`
 environmental variables.
 
-# Installation
+## Installation
 Clone the repo.
 
 ```bash
@@ -35,7 +35,7 @@ export MANPATH=$MANPATH:$INSTALLATION_PATH/man
 
 In both instances, replace `$INSTALLATION_PATH` with the correct path.
 
-# Usage
+## Usage
 Once instaled, simply type `exed [EXECUTABLE_FILE_NAME]` to quickly edit an
 executable script in your `PATH`.
 
@@ -48,4 +48,7 @@ options, such as
 verbose=true       # run in verbose mode
 all_in_path=true   # show all instances in $PATH; let user choose which to edit
 ```
+## Reporting Bugs
+If bugs are found, or you want to request a feature, please [submit an
+issue](https://github.com/evanthegrayt/exed/issues/new)
 
