@@ -14,10 +14,6 @@ Clone the repo.
 ```bash
 git clone https://github.com/evanthegrayt/executable-editor.git
 ```
-### Shake
-If using [shake](https://github.com/evanthegrayt/shake), simply run `shake` from
-the root of the repository.
-### Manual Installation
 Link the executable somewhere in your path. In most cases, `/usr/local/bin` is
 a good place to do so.
 ```sh
