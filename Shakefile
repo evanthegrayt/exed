@@ -1,0 +1,58 @@
+# vi: set ft=sh :
+readonly WHERE='/usr/local/bin'
+readonly EXE='exed'
+
+default() {
+    desc 'The default task when calling `shake` with no arguments.'
+    deploy
+}
+
+deploy() {
+    desc "Link executable to a directory in PATH"
+    local where="${1:-$WHERE}"
+
+    if ! [[ -d $where ]]; then
+        echo "$where is not a directory. Please pass directory as argument."
+        return 1
+    fi
+    if [[ ! -e $where/$EXE ]]; then
+        ln -s $PWD/bin/exed "$where/$EXE"
+    else
+        echo "File [$where/$EXE] already exists."
+    fi
+}
+
+deploy:tag() {
+    desc 'Create git tag'
+
+    local tag="$( date '+%Y-%m-%d-%H%M' )"
+
+    git tag "$tag"
+}
+
+deploy:update() {
+    desc "Pull latest changes from master."
+
+    prereq deploy:tag
+
+    git pull origin master
+}
+
+deploy:rollback() {
+    desc "Roll back to last commit."
+
+    local last_tag="$( git tag | tail -n 1 )"
+
+    sudo git checkout "$last_tag"
+}
+
+uninstall() {
+    desc "Uninstall $EXE."
+
+    local exe=$( which $EXE )
+
+    if [[ -L $exe ]]; then
+        rm -v $exe
+    fi
+}
+

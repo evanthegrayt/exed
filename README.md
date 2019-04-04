@@ -11,29 +11,24 @@ environmental variables.
 
 ## Installation
 Clone the repo.
-
 ```bash
 git clone https://github.com/evanthegrayt/executable-editor.git
 ```
-
-Either add the `bin` to your `PATH`, move the file into your existing `PATH`, or
-create an alias.
-
-```bash
-export PATH=$INSTALLATION_PATH/bin:$PATH
-# or
-mv $INSTALLATION_PATH/bin/exed /usr/local/bin
-# or
-alias exed $INSTALLATION_PATH/bin/exed
+### Shake
+If using [shake](https://github.com/evanthegrayt/shake), simply run `shake` from
+the root of the repository.
+### Manual Installation
+Link the executable somewhere in your path. In most cases, `/usr/local/bin` is
+a good place to do so.
+```sh
+# From inside the root directory of the repository...
+ln -s $PWD/bin/exed /usr/local/bin/exed
 ```
-
-Add the manual direcotry to your manpath.
-
+Optionally, Add the manual direcotry to your `MANPATH`:
 ```bash
-export MANPATH=$MANPATH:$INSTALLATION_PATH/man
+# From inside the root directory of the repository...
+export MANPATH=$MANPATH:$PWD/man
 ```
-
-In both instances, replace `$INSTALLATION_PATH` with the correct path.
 
 ## Usage
 Once instaled, simply type `exed [EXECUTABLE_FILE_NAME]` to quickly edit an
