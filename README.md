@@ -22,7 +22,7 @@ ln -s $PWD/bin/exed /usr/local/bin/exed
 ```
 Optionally, Add the manual direcotry to your `MANPATH`:
 ```bash
-# From inside the root directory of the repository...
+# Add this to a startup file, such as ~/.bashrc or ~/.zshrc
 export MANPATH=$MANPATH:$PWD/man
 ```
 
@@ -43,3 +43,7 @@ all_in_path=true   # show all instances in $PATH; let user choose which to edit
 If bugs are found, or you want to request a feature, please [submit an
 issue](https://github.com/evanthegrayt/exed/issues/new)
 
+## Self-Promotion
+I do these projects for fun, and I enjoy knowing that they're helpful to people.
+Consider starring [the repository](https://github.com/evanthegrayt/exed) if you
+like it! If you love it, follow me [on github](https://github.com/evanthegrayt)!
