@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Author:  Evan Gray
-# Version: 3.2
+# Version: 0.3.3
 
 readonly PROGRAM_NAME=${0##*/}
-readonly VERSION="$PROGRAM_NAME 3.2 (May 2017)"
+readonly VERSION="$PROGRAM_NAME 0.3.3 (April 2021)"
 readonly USAGE="USAGE: $PROGRAM_NAME [OPTIONS...] [EXECUTABLE_NAME]"
 
 print_help() {
@@ -38,7 +38,7 @@ abort() {
     local msg="${1:-'Exiting...'}"
     local status=${2:-1}
 
-    echo "$msg"
+    echo >&2 "$msg"
     exit $status
 }
 

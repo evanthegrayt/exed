@@ -22,8 +22,9 @@ ln -s $PWD/bin/exed /usr/local/bin/exed
 ```
 Optionally, Add the manual direcotry to your `MANPATH`:
 ```bash
-# Add this to a startup file, such as ~/.bashrc or ~/.zshrc
-export MANPATH=$MANPATH:$PWD/man
+# Add this to a startup file, such as ~/.bashrc or ~/.zshrc. Just replace
+# `PATH_TO_REPO` with the actual path to the repository.
+export MANPATH=$MANPATH:PATH_TO_REPO/man
 ```
 
 ## Usage
