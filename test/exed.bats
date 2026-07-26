@@ -12,7 +12,7 @@ setup() {
 }
 
 exed() {
-    HOME="$TEST_HOME" FCEDIT= VISUAL= EDITOR= "$EXED" "$@" 2>&1
+    HOME="$TEST_HOME" VISUAL= EDITOR= "$EXED" "$@" 2>&1
 }
 
 file_mode() {
@@ -64,7 +64,7 @@ make_recording_editor() {
 
     make_executable "$target"
 
-    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" FCEDIT= VISUAL= EDITOR= \
+    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" VISUAL= EDITOR= \
         "$EXED" -e "touch $opened" existing
 
     [ "$status" -eq 0 ]
@@ -84,7 +84,7 @@ make_recording_editor() {
     make_executable "$second_target"
     make_recording_editor "$editor" "$opened"
 
-    run bash -c 'printf "2\n" | PATH="$1:$2:$PATH" HOME="$3" FCEDIT= VISUAL= EDITOR= "$4" -e "$5" -a dupe' \
+    run bash -c 'printf "2\n" | PATH="$1:$2:$PATH" HOME="$3" VISUAL= EDITOR= "$4" -e "$5" -a dupe' \
         _ "$first_dir" "$second_dir" "$TEST_HOME" "$EXED" "$editor"
 
     [ "$status" -eq 0 ]
@@ -92,7 +92,7 @@ make_recording_editor() {
 }
 
 @test "default mode refuses missing executables" {
-    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" FCEDIT= VISUAL= EDITOR= \
+    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" VISUAL= EDITOR= \
         "$EXED" -e true definitely-not-an-exed-test-executable
 
     [ "$status" -eq 1 ]
@@ -189,7 +189,7 @@ make_recording_editor() {
         printf '%s\n' "editor=true"
         printf '%s\n' "perms=700"
         printf '%s\n' "env=true"
-        printf '%s\n' "setifs=true"
+        printf '%s\n' "set_ifs=true"
         printf '%s\n' "clobber_mode=clobber"
     } > "$TEST_HOME/.exedrc"
 

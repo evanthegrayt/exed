@@ -22,8 +22,8 @@ This option cannot be used with \fB-c\fR.
 Create \fIEXECUTABLE_NAME\fR instead of finding it in \fBPATH\fR.
 .IP "\fB-e \fIEDITOR\fR"
 Choose the editor to open the file in.
-If this option is not used, \fBexed\fR checks \fB$FCEDIT\fR,
-\fB$VISUAL\fR, and \fB$EDITOR\fR, in that order.
+If this option is not used, \fBexed\fR checks \fB$VISUAL\fR, and \fB$EDITOR\fR,
+in that order.
 If none are set, it defaults to \fBvim\fR.
 .IP "\fB-v\fR"
 Print the selected editor and file location before opening.
@@ -68,8 +68,6 @@ Prompt before overwriting an existing file.
 This is the default and is useful for overriding \fBclobber=true\fR in
 \fB~/.exedrc\fR.
 .SH ENVIRONMENT
-.IP "\fBFCEDIT\fR"
-First editor fallback checked when \fB-e\fR is not passed.
 .IP "\fBVISUAL\fR"
 Second editor fallback checked when \fB-e\fR is not passed.
 .IP "\fBEDITOR\fR"
@@ -89,7 +87,7 @@ clobber=true
 clobber_mode=clobber
 clobber_mode=noclobber
 clobber_mode=interactive
-setifs=true
+set_ifs=true
 .fi
 .PP
 Boolean values are false by default.

@@ -56,8 +56,7 @@ print_help() {
     -O                  | prompt before overwriting in create mode (default)
 
     --- GENERAL ---
-    -e EDITOR           | choose editor; defaults to \$FCEDIT, \$VISUAL,
-                        + \$EDITOR, then vim
+    -e EDITOR           | choose editor; defaults to \$VISUAL, \$EDITOR, then vi
     -V                  | print version and exit
     -u                  | print usage
     -h                  | print this help and exit
@@ -92,15 +91,7 @@ resolve_command() {
 }
 
 set_editor() {
-    if [[ -n ${FCEDIT:-} ]]; then
-        printf '%s\n' "$FCEDIT"
-    elif [[ -n ${VISUAL:-} ]]; then
-        printf '%s\n' "$VISUAL"
-    elif [[ -n ${EDITOR:-} ]]; then
-        printf '%s\n' "$EDITOR"
-    else
-        printf '%s\n' "vim"
-    fi
+    printf '%s\n' ${VISUAL:-${EDITOR:-vi}}
 }
 
 editor_available() {
@@ -315,7 +306,7 @@ load_config() {
         CLOBBER_MODE=clobber
     fi
 
-    if is_true "${setifs:-false}"; then
+    if is_true "${set_ifs:-false}"; then
         IFS_SETTING=$IFS_LINE
     fi
 }

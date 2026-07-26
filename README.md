@@ -44,17 +44,14 @@ Run `exed -h` to see all available options.
 
 ## Environment Variables
 If no editor is passed with `-e`, `exed` will check your environment for
-`$FCEDIT`, `$VISUAL`, and `$EDITOR`, in that order. If none are set, it will
-fall back to `vim`.
+`$VISUAL`, and `$EDITOR`, in that order. It is recommended to use these
+variables, as it's the *nix standard. If, for some reason, you want to specify a
+certain editor specifically for exed, you can set `editor=EDITOR` in the
+[configuration file](#configuration-file).
 
-If you want to set a default editor, add something like this to your shell
-configuration.
+If none of the above are set, `exed` falls back to `vi`.
 
-```sh
-export VISUAL=code # Make VSCode your default graphical editor.
-```
-
-## Configuration Files
+## Configuration File
 `exed` accepts a configuration file where you can set default variables. Create
 a file in your home directory called `.exedrc`. Available variables:
 
@@ -68,7 +65,7 @@ a file in your home directory called `.exedrc`. Available variables:
 - `clobber=true` (same as passing `-C`)
 - `clobber_mode=clobber`, `clobber_mode=noclobber`, or
   `clobber_mode=interactive`
-- `setifs=true` (same as passing `-I`)
+- `set_ifs=true` (same as passing `-I`)
 
 All boolean values are `false` by default. Any variables set in the
 configuration file can be overwritten by flags when initiating the program. For
@@ -82,5 +79,16 @@ Run the test suite with:
 bats test
 ```
 
-## Reporting Bugs
-To report bugs, please create an issue in the repository.
+## Reporting Bugs and Requesting Features
+If you have an idea or find a bug, please [create an
+issue](https://github.com/evanthegrayt/exed/issues/new). Just make sure
+the topic doesn't already exist. Better yet, you can always submit a Pull
+Request.
+
+## Support this project
+I love knowing when people find my work useful. Any kind of support is very much
+appreciated!
+
+- ⭐️ Like the project? Star [the repository](https://github.com/evanthegrayt/exed)!
+- ❤️ Love the project? Follow me [on GitHub](https://github.com/evanthegrayt)!
+- 💸 *Really* love it? Consider [buying me a tea](https://paypal.me/evanrgray)!
