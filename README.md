@@ -1,50 +1,86 @@
-# executable-editor
-Quickly edit an executable script in your `$PATH`
+# Executable Editor
+`exed` opens executable scripts in your editor.
 
-I found myself creating a lot of shell/ruby/python executable scripts and wanted
-to quickly edit them. I got tired of typing `vim $( which [FILE] )`, so I made a
-script that will do this for me. I gave it a few different options, such as
-`-a`, which can find all instances in your `PATH` and gives you the option to
-choose which one to edit, via the `select` loop. You can also choose your editor
-at runtime; otherwise, it will try to use the `VISUAL`, and then `EDITOR`
-environmental variables.
+By default, it finds an existing executable in your `PATH` and opens it. With
+`-c`, it creates a new executable file, writes an interpreter line, applies
+executable permissions, and opens the file in your editor.
 
 ## Installation
-Clone the repo.
-```bash
-git clone https://github.com/evanthegrayt/executable-editor.git
-```
-Link the executable somewhere in your path. In most cases, `/usr/local/bin` is
-a good place to do so.
+Clone the repository, `cd` into the base directory, and link the executable into
+your path:
+
 ```sh
-# From inside the root directory of the repository...
-ln -s $PWD/bin/exed /usr/local/bin/exed
-```
-Optionally, Add the manual direcotry to your `MANPATH`:
-```bash
-# Add this to a startup file, such as ~/.bashrc or ~/.zshrc. Just replace
-# `PATH_TO_REPO` with the actual path to the repository.
-export MANPATH=$MANPATH:PATH_TO_REPO/man
+git clone https://github.com/evanthegrayt/exed.git
+cd exed
+ln -s "$PWD/bin/exed" /usr/local/bin/exed
 ```
 
 ## Usage
-Once instaled, simply type `exed [EXECUTABLE_FILE_NAME]` to quickly edit an
-executable script in your `PATH`.
+Open an executable that already exists in your `PATH`:
 
-For available options, run `exed -h`, or if you correctly installed the `man`
-page, run `man exed`.
-
-This script can source a file called `~/.exedrc`, where you can set some default
-options, such as
-```bash
-verbose=true       # run in verbose mode
-all_in_path=true   # show all instances in $PATH; let user choose which to edit
+```sh
+exed ruby
 ```
-## Reporting Bugs
-If bugs are found, or you want to request a feature, please [submit an
-issue](https://github.com/evanthegrayt/exed/issues/new)
 
-## Self-Promotion
-I do these projects for fun, and I enjoy knowing that they're helpful to people.
-Consider starring [the repository](https://github.com/evanthegrayt/exed) if you
-like it! If you love it, follow me [on github](https://github.com/evanthegrayt)!
+Create a new executable file:
+
+```sh
+exed -c script
+exed -c -l ruby ruby_script
+```
+
+Useful options:
+
+- `-a`: find all matching executables in `PATH` and choose one
+- `-c`: create a file instead of finding one
+- `-e EDITOR`: choose an editor
+- `-l LANGUAGE`: choose the language for a created file
+- `-m MODE`: choose permissions for a created file
+- `-n`: use `/usr/bin/env LANGUAGE` for a created file
+- `-I`: add `IFS=$'\n'` for created `bash`, `sh`, or `zsh` files
+- `-v`: print the executable location before opening it
+
+Run `exed -h` to see all available options.
+
+## Environment Variables
+If no editor is passed with `-e`, `exed` will check your environment for
+`$FCEDIT`, `$VISUAL`, and `$EDITOR`, in that order. If none are set, it will
+fall back to `vim`.
+
+If you want to set a default editor, add something like this to your shell
+configuration.
+
+```sh
+export VISUAL=code # Make VSCode your default graphical editor.
+```
+
+## Configuration Files
+`exed` accepts a configuration file where you can set default variables. Create
+a file in your home directory called `.exedrc`. Available variables:
+
+- `all_in_path=true` (same as passing `-a`)
+- `editor=EDITOR`
+- `verbose=true` (same as passing `-v`)
+- `language=LANGUAGE`
+- `perms=MODE` (three-digit chmod-style permissions where the owner can execute,
+  such as `755` or `700`)
+- `env=true` (same as passing `-n`)
+- `clobber=true` (same as passing `-C`)
+- `clobber_mode=clobber`, `clobber_mode=noclobber`, or
+  `clobber_mode=interactive`
+- `setifs=true` (same as passing `-I`)
+
+All boolean values are `false` by default. Any variables set in the
+configuration file can be overwritten by flags when initiating the program. For
+example, `-N` unsets a configured `env=true`, and `-O` restores the default
+interactive overwrite prompt if clobbering is configured.
+
+## Testing
+Run the test suite with:
+
+```sh
+bats test
+```
+
+## Reporting Bugs
+To report bugs, please create an issue in the repository.

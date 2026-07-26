@@ -1,128 +1,498 @@
 #!/usr/bin/env bash
-# Author:  Evan Gray
-# Version: 0.3.3
+# Author:   Evan Gray
+# Version:  0.1.0
 
-readonly PROGRAM_NAME=${0##*/}
-readonly VERSION="$PROGRAM_NAME 0.3.3 (April 2021)"
-readonly USAGE="USAGE: $PROGRAM_NAME [OPTIONS...] [EXECUTABLE_NAME]"
+readonly PROGRAM=${BASH_SOURCE[0]##*/}
+readonly VERSION="$PROGRAM 0.1.0 (July 2026)"
+readonly USAGE="USAGE: $PROGRAM [OPTIONS...] EXECUTABLE_NAME"
+readonly DEFAULT_LANGUAGE=bash
+readonly DEFAULT_PERMS=755
+readonly IFS_LINE="IFS=\$'\\n'"
+
+reset_runtime_state() {
+    ALL_IN_PATH=false
+    CLOBBER_MODE=
+    CREATE=false
+    CREATE_OPTION_USED=false
+    EDITOR_CMD=
+    EXECUTABLE=
+    FILE=
+    FOUND_PATHS=()
+    IFS_SETTING=
+    INTERPRETER=
+    INTERPRETER_OPTION=
+    LANGUAGE=
+    PERMS=
+    USE_ENV=false
+    VERBOSE=false
+}
+
+print_usage() {
+    printf '%s\n' "$USAGE"
+}
 
 print_help() {
     cat <<____EOF
 
-    ======== $PROGRAM_NAME Help ========
-    -a: Will find all instances of [FILE] and ask which one to edit
-    -e: Editor (optional, will default to vim)
-    -v: Verbose. Will print output, such as \$EDITOR and file location
-    -V: Print version and exit.
-    -u: print usage
-    -h: print this help and exit
+    ======== $PROGRAM Help ========
+
+    --- PATH EDITING (default) ---
+    $PROGRAM EXECUTABLE | find EXECUTABLE in PATH and open it
+    -a                  | find all PATH matches and choose one
+    -v                  | print editor and file location before opening
+
+    --- CREATION ---
+    -c                  | create EXECUTABLE instead of finding it in PATH
+    -l LANGUAGE         | language to use when creating (default: bash)
+    -i INTERPRETER      | custom interpreter path; $PROGRAM adds '#!'
+    -n                  | use /usr/bin/env LANGUAGE for created files
+    -N                  | unset configured env option
+    -m MODE             | chmod-style mode for created files (default: 755)
+                        + owner must have execute permission
+    -o OPTION           | add OPTION after the interpreter line
+    -I                  | set Internal Field Separator (IFS) in bash, sh, and zsh
+    -C                  | clobber existing files in create mode
+    -B                  | fail if file exists in create mode
+    -O                  | prompt before overwriting in create mode (default)
+
+    --- GENERAL ---
+    -e EDITOR           | choose editor; defaults to \$FCEDIT, \$VISUAL,
+                        + \$EDITOR, then vim
+    -V                  | print version and exit
+    -u                  | print usage
+    -h                  | print this help and exit
 
     ========= Manual =========
-    \`man $PROGRAM_NAME' for full manual
+    \`man $PROGRAM' for full manual
 
 ____EOF
-    exit
-}
-
-set_editor() {
-    if [[ -n "$VISUAL" ]]; then
-        echo "$VISUAL"
-    elif [[ -n "$EDITOR" ]]; then
-        echo "$EDITOR"
-    else
-        echo "vim"
-    fi
 }
 
 abort() {
-    local msg="${1:-'Exiting...'}"
+    local msg=${1:-'Exiting...'}
     local status=${2:-1}
 
-    echo >&2 "$msg"
-    exit $status
+    printf '%s\n' "$msg" >&2
+    exit "$status"
 }
 
-[[ -f ~/.${PROGRAM_NAME}rc ]] && source ~/.${PROGRAM_NAME}rc
+is_true() {
+    case ${1:-} in
+        true|TRUE|True|1|yes|YES|Yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-: ${VERBOSE:=false}
-: ${ALL_IN_PATH:=false}
+command_available() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-while getopts "ae:huvV" opt 2>/dev/null; do
-    case $opt in
-        a)
-            ALL_IN_PATH=true
+resolve_command() {
+    command -v "$1" 2>/dev/null
+}
+
+set_editor() {
+    if [[ -n ${FCEDIT:-} ]]; then
+        printf '%s\n' "$FCEDIT"
+    elif [[ -n ${VISUAL:-} ]]; then
+        printf '%s\n' "$VISUAL"
+    elif [[ -n ${EDITOR:-} ]]; then
+        printf '%s\n' "$EDITOR"
+    else
+        printf '%s\n' "vim"
+    fi
+}
+
+editor_available() {
+    local editor=$1
+    local editor_command=${editor%%[[:space:]]*}
+
+    [[ -n $editor_command ]] && command_available "$editor_command"
+}
+
+open_editor() {
+    local editor=$1
+    local file=$2
+
+    # Allow common editor values with flags, such as "code -w" or "vim -p".
+    # shellcheck disable=SC2086
+    $editor "$file"
+}
+
+set_interpreter() {
+    local language=$1
+    local use_env=$2
+    local env_path
+    local interpreter
+
+    if is_true "$use_env"; then
+        env_path=$(resolve_command env) || abort "[env] is not found in your path!"
+        printf '#!%s %s\n' "$env_path" "$language"
+    else
+        interpreter=$(resolve_command "$language") || \
+            abort "[$language] is not supported on this system. Exiting..."
+        printf '#!%s\n' "$interpreter"
+    fi
+}
+
+set_custom_interpreter() {
+    local interpreter=$1
+
+    [[ -n $interpreter ]] || abort "$USAGE"
+    interpreter=${interpreter#'#!'}
+    printf '#!%s\n' "$interpreter"
+}
+
+validate_permissions() {
+    local perms=$1
+
+    if [[ ! $perms =~ ^[0-7]{3}$ ]]; then
+        printf '%s\n' "-m option should be a three-digit number in chmod's format." >&2
+        abort "\`man $PROGRAM' for more information."
+    elif [[ ! $perms =~ ^[1357][0-7]{2}$ ]]; then
+        printf '%s\n' "-m option must give the owner execute permission." >&2
+        abort "\`man $PROGRAM' for more information."
+    fi
+}
+
+is_ifs_compatible() {
+    case $1 in
+        bash|sh|zsh) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+mark_create_option() {
+    CREATE_OPTION_USED=true
+}
+
+path_seen() {
+    local needle=$1
+    local path
+
+    for path in "${FOUND_PATHS[@]}"; do
+        [[ $path == "$needle" ]] && return 0
+    done
+
+    return 1
+}
+
+find_executables() {
+    local executable=$1
+    local all_matches=$2
+    local candidate
+    local path_dir
+    local -a path_dirs
+
+    FOUND_PATHS=()
+
+    if [[ $executable == */* ]]; then
+        [[ -f $executable && -x $executable ]] && FOUND_PATHS+=("$executable")
+        return 0
+    fi
+
+    IFS=: read -r -a path_dirs <<< "${PATH:-}"
+
+    for path_dir in "${path_dirs[@]}"; do
+        path_dir=${path_dir:-.}
+        candidate=$path_dir/$executable
+
+        if [[ -f $candidate && -x $candidate ]] && ! path_seen "$candidate"; then
+            FOUND_PATHS+=("$candidate")
+            is_true "$all_matches" || break
+        fi
+    done
+}
+
+choose_executable() {
+    local choice
+
+    case ${#FOUND_PATHS[@]} in
+        0)
+            abort "Executable [$EXECUTABLE] either does not exist, or is not executable."
             ;;
-        e)
-            editor=$OPTARG
-            ;;
-        h)
-            print_help
-            ;;
-        u)
-            echo "$USAGE"
-            exit
-            ;;
-        v)
-            VERBOSE=true
-            ;;
-        V)
-            echo $VERSION
-            exit
+        1)
+            FILE=${FOUND_PATHS[0]}
             ;;
         *)
-            abort "$USAGE"
+            PS3="Choose number of file to edit or Cancel: "
+            select choice in "${FOUND_PATHS[@]}" Cancel; do
+                case $choice in
+                    Cancel)
+                        abort "Exiting..." 0
+                        ;;
+                    "")
+                        printf '%s\n' "Invalid option."
+                        ;;
+                    *)
+                        FILE=$choice
+                        break
+                        ;;
+                esac
+            done
             ;;
     esac
-done
-shift $(( OPTIND - 1 ))
+}
 
-readonly VERBOSE
-readonly ALL_IN_PATH
+handle_clobbering() {
+    local file=$1
+    local editor=$2
+    local mode=${3:-interactive}
 
-[[ -n "$1" ]] && exe="$1" || abort "$USAGE"
+    if [[ -e $file && ! -f $file ]]; then
+        abort "[$file] exists and is not a regular file."
+    fi
 
-: ${editor:=$( set_editor )}
-
-which "$editor" >/dev/null || abort "Editor [$editor] is not found in your path"
-
-if $ALL_IN_PATH; then
-    fpath=()
-    for file in $( which -a "$exe" 2>/dev/null ); do
-        [[ ! "${fpath[@]}" =~ (^|[^[:alpha:]])$file([^[:alpha:]]|$) ]] && \
-            fpath+=("$i")
-    done
-else
-    fpath=( $( which "$exe" 2>/dev/null ) )
-fi
-
-if (( ${#fpath[@]} == 0 )); then
-    abort "Executable [$exe] either does not exist, or is not in your path."
-elif (( ${#fpath[@]} > 1 )); then
-    PS3="Choose number of file to edit or Cancel: "
-    select number in ${fpath[@]} Cancel; do
-        case $number in
-            Cancel)
-                echo "Exiting..."
-                exit
+    if [[ -f $file ]]; then
+        case $mode in
+            noclobber)
+                printf '%s\n' "[$file] already exists and 'No-Clobber' is set."
+                abort "Run with '-h' for help."
+                ;;
+            clobber)
+                return 0
+                ;;
+            interactive)
+                printf '%s\n' "[$file] already exists..."
+                read -r -p "(e)dit it, (o)verwrite it, or e(x)it?: "
+                case $REPLY in
+                    e|E)
+                        printf '%s\n' "Opening $file in $editor."
+                        open_editor "$editor" "$file"
+                        exit
+                        ;;
+                    o|O)
+                        printf '%s\n' "Overwriting $file"
+                        ;;
+                    x|X)
+                        abort "Exiting..." 0
+                        ;;
+                    *)
+                        abort "Invalid option! Exiting..."
+                        ;;
+                esac
                 ;;
             *)
-                echo $number
-                if [[ -f "$number" ]]; then
-                    fpath="$number"
-                    break
-                else
-                    printf "Exiting..."
-                    exit
+                abort "Invalid clobbering option called!"
+                ;;
+        esac
+    fi
+}
+
+write_file() {
+    local file=$1
+
+    {
+        printf '%s%s\n' "$INTERPRETER" "${INTERPRETER_OPTION:-}"
+
+        if [[ -n ${IFS_SETTING:-} ]]; then
+            printf '%s\n' "$IFS_SETTING"
+        fi
+
+        if [[ $LANGUAGE == "php" ]]; then
+            printf '<?php\n\n?>\n'
+        fi
+    } > "$file" || abort "Could not write [$file]."
+}
+
+load_config() {
+    local config_file=~/."$PROGRAM"rc
+
+    [[ -f $config_file ]] || return 0
+
+    # shellcheck source=/dev/null
+    source "$config_file"
+
+    ALL_IN_PATH=${all_in_path:-$ALL_IN_PATH}
+    EDITOR_CMD=${EDITOR_CMD:-${editor:-}}
+    LANGUAGE=${LANGUAGE:-${language:-${lang:-}}}
+    PERMS=${PERMS:-${perms:-}}
+    USE_ENV=${env:-$USE_ENV}
+    VERBOSE=${verbose:-$VERBOSE}
+    CLOBBER_MODE=${CLOBBER_MODE:-${clobber_mode:-}}
+
+    if is_true "${clobber:-false}"; then
+        CLOBBER_MODE=clobber
+    fi
+
+    if is_true "${setifs:-false}"; then
+        IFS_SETTING=$IFS_LINE
+    fi
+}
+
+validate_config() {
+    if [[ -n ${CLOBBER_MODE:-} ]]; then
+        case $CLOBBER_MODE in
+            clobber|noclobber|interactive) ;;
+            *) abort "Invalid clobber_mode [$CLOBBER_MODE] in ~/.${PROGRAM}rc." ;;
+        esac
+    fi
+}
+
+parse_args() {
+    local opt
+
+    OPTIND=1
+    while getopts ":aBcCe:hi:Il:m:nNo:OuvV" opt; do
+        case $opt in
+            a)
+                ALL_IN_PATH=true
+                ;;
+            B)
+                CLOBBER_MODE=noclobber
+                mark_create_option
+                ;;
+            c)
+                CREATE=true
+                ;;
+            C)
+                CLOBBER_MODE=clobber
+                mark_create_option
+                ;;
+            e)
+                EDITOR_CMD=$OPTARG
+                ;;
+            h)
+                print_help
+                exit 0
+                ;;
+            i)
+                INTERPRETER=$(set_custom_interpreter "$OPTARG") || exit "$?"
+                LANGUAGE=custom
+                mark_create_option
+                ;;
+            I)
+                IFS_SETTING=$IFS_LINE
+                mark_create_option
+                ;;
+            l)
+                LANGUAGE=$OPTARG
+                mark_create_option
+                ;;
+            m)
+                PERMS=$OPTARG
+                validate_permissions "$PERMS"
+                mark_create_option
+                ;;
+            n)
+                USE_ENV=true
+                mark_create_option
+                ;;
+            N)
+                USE_ENV=false
+                mark_create_option
+                ;;
+            o)
+                INTERPRETER_OPTION=$OPTARG
+                if [[ $INTERPRETER_OPTION != -* ]]; then
+                    abort "Option must start with '-'. Exiting..."
                 fi
+                INTERPRETER_OPTION=" $INTERPRETER_OPTION"
+                mark_create_option
+                ;;
+            O)
+                CLOBBER_MODE=interactive
+                mark_create_option
+                ;;
+            u)
+                print_usage
+                exit 0
+                ;;
+            v)
+                VERBOSE=true
+                ;;
+            V)
+                printf '%s\n' "$VERSION"
+                exit 0
+                ;;
+            :)
+                abort "Option -$OPTARG requires an argument. $USAGE"
+                ;;
+            \?)
+                abort "Invalid option: -$OPTARG. $USAGE"
                 ;;
         esac
     done
+    shift "$(( OPTIND - 1 ))"
+
+    [[ $# -eq 1 ]] || abort "$USAGE"
+
+    EXECUTABLE=$1
+}
+
+validate_args() {
+    if is_true "$CREATE" && is_true "$ALL_IN_PATH"; then
+        abort "-a cannot be used with -c."
+    fi
+
+    if ! is_true "$CREATE" && is_true "$CREATE_OPTION_USED"; then
+        abort "Creation options can only be used with -c."
+    fi
+}
+
+prepare_editor() {
+    EDITOR_CMD=${EDITOR_CMD:-$(set_editor)}
+
+    editor_available "$EDITOR_CMD" || \
+        abort "Editor [$EDITOR_CMD] is not found in your path."
+}
+
+prepare_create() {
+    FILE=$EXECUTABLE
+    LANGUAGE=${LANGUAGE:-$DEFAULT_LANGUAGE}
+    PERMS=${PERMS:-$DEFAULT_PERMS}
+    CLOBBER_MODE=${CLOBBER_MODE:-interactive}
+
+    validate_permissions "$PERMS"
+
+    if [[ -n ${IFS_SETTING:-} ]] && ! is_ifs_compatible "$LANGUAGE"; then
+        printf '%s\n' "'-I' is only compatible with bash, sh, and zsh," >&2
+        abort "as it sets the Internal Field Separator."
+    fi
+
+    if [[ -z ${INTERPRETER:-} ]]; then
+        INTERPRETER=$(set_interpreter "$LANGUAGE" "$USE_ENV") || exit "$?"
+    fi
+}
+
+run_create() {
+    prepare_create
+    handle_clobbering "$FILE" "$EDITOR_CMD" "$CLOBBER_MODE"
+    write_file "$FILE"
+    chmod "$PERMS" "$FILE" || abort "Could not set permissions on [$FILE]."
+    open_editor "$EDITOR_CMD" "$FILE"
+}
+
+run_find() {
+    find_executables "$EXECUTABLE" "$ALL_IN_PATH"
+    choose_executable
+
+    if is_true "$VERBOSE"; then
+        printf '%s\n' "[${FILE##*/}] was found in [${FILE%/*}]. Opening in [$EDITOR_CMD]"
+    fi
+
+    open_editor "$EDITOR_CMD" "$FILE"
+}
+
+run() {
+    prepare_editor
+
+    if is_true "$CREATE"; then
+        run_create
+    else
+        run_find
+    fi
+}
+
+main() {
+    reset_runtime_state
+    load_config
+    validate_config
+    parse_args "$@"
+    validate_args
+    run
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+    main "$@"
 fi
-
-if $VERBOSE; then
-    echo "[${fpath##*/}] was found in [${fpath%/*}]. Opening in [$editor]"
-    sleep 1
-fi
-
-$editor "$fpath"
-
