@@ -6,14 +6,73 @@ By default, it finds an existing executable in your `PATH` and opens it. With
 executable permissions, and opens the file in your editor.
 
 ## Installation
-Clone the repository, `cd` into the base directory, and link the executable into
-your path:
+Clone the repository, `cd` into the base directory, and run the installer:
 
 ```sh
 git clone https://github.com/evanthegrayt/exed.git
 cd exed
-ln -s "$PWD/bin/exed" /usr/local/bin/exed
+./install.sh
 ```
+
+By default, the installer symlinks the executable, man page, and completion
+files under `/usr/local`:
+
+```text
+/usr/local/bin/exed
+/usr/local/share/man/man1/exed.1
+/usr/local/share/zsh/site-functions/_exed
+/usr/local/share/bash-completion/completions/exed
+```
+
+Use `./install.sh --user` to install under `$HOME/.local`, or
+`./install.sh --prefix DIR` to choose another prefix. Run `./install.sh --help`
+for all installer options.
+
+Manual installation is also fine:
+
+```sh
+ln -s "$PWD/bin/exed" /usr/local/bin/exed
+ln -s "$PWD/man/man1/exed.1" /usr/local/share/man/man1/exed.1
+```
+
+## Shell Plugins
+`exed` can be used as a shell plugin for zsh or bash. The plugin files are
+sourceable setup layers: they add this repository's `bin` directory to `PATH`
+and register completion. They do not source the executable itself.
+
+For zsh:
+
+```sh
+source /path/to/exed/exed.plugin.zsh
+```
+
+For bash:
+
+```sh
+source /path/to/exed/exed.plugin.bash
+```
+
+For Oh My Zsh, clone this repository into the custom plugin directory and add
+`exed` to the `plugins=(...)` list:
+
+```sh
+git clone https://github.com/evanthegrayt/exed.git \
+  "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/exed"
+```
+
+For Bash-it, use `exed.plugin.bash` as the plugin file.
+
+## Completion
+Completion files can be used without a shell plugin:
+
+```text
+share/zsh/site-functions/_exed
+share/bash-completion/completions/exed
+```
+
+For zsh, place `share/zsh/site-functions` in `fpath` before `compinit` runs.
+For bash, source `share/bash-completion/completions/exed` or install it where
+your system's bash-completion setup loads command completions.
 
 ## Usage
 Open an executable that already exists in your `PATH`:

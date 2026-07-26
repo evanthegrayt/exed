@@ -1,0 +1,42 @@
+#compdef exed
+
+_exed_target() {
+  if (( ${+opt_args[-c]} )); then
+    _files
+  elif [[ $PREFIX == */* ]]; then
+    _files -g '*(*)'
+  else
+    _path_commands
+  fi
+}
+
+_exed() {
+  local context state line
+  typeset -A opt_args
+
+  _arguments -s -S \
+    '(-c)-a[find all PATH matches and choose one]' \
+    '(-a)-c[create executable instead of finding it in PATH]' \
+    '-B[fail if file exists in create mode]' \
+    '-C[overwrite existing files in create mode]' \
+    '-e+[choose editor]:editor:_command_names' \
+    '-h[print help and exit]' \
+    '-i+[custom interpreter path]:interpreter:_files' \
+    '-I[set IFS line in created bash, sh, or zsh files]' \
+    '-l+[language for created files]:language:(bash sh zsh python ruby perl php node awk sed)' \
+    '-m+[chmod-style mode for created files]:mode:(700 755 775)' \
+    '-n[use /usr/bin/env LANGUAGE for created files]' \
+    '-N[unset configured env option]' \
+    '-o+[add option after interpreter line]:interpreter option:' \
+    '-O[prompt before overwriting in create mode]' \
+    '-u[print usage and exit]' \
+    '-v[print editor and file location before opening]' \
+    '-V[print version and exit]' \
+    ':executable name:->target' && return
+
+  case $state in
+    target) _exed_target ;;
+  esac
+}
+
+_exed "$@"

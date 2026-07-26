@@ -1,0 +1,166 @@
+##
+# Bash completion for exed.
+
+_exed_complete_has_option() {
+    local requested=$1
+    local index
+    local word
+    local option
+    local options
+
+    index=1
+    while (( index < COMP_CWORD )); do
+        word=${COMP_WORDS[index]}
+        [[ $word == -- ]] && return 1
+        if [[ $word != -* || $word == "-" ]]; then
+            (( index += 1 ))
+            continue
+        fi
+
+        options=${word#-}
+        while [[ -n $options ]]; do
+            option=${options%"${options#?}"}
+            options=${options#?}
+            [[ $option == "$requested" ]] && return 0
+        done
+
+        if _exed_complete_word_consumes_next_arg "$word"; then
+            (( index += 2 ))
+        else
+            (( index += 1 ))
+        fi
+    done
+
+    return 1
+}
+
+_exed_complete_word_consumes_next_arg() {
+    local word=$1
+    local option
+    local options
+
+    options=${word#-}
+    while [[ -n $options ]]; do
+        option=${options%"${options#?}"}
+        options=${options#?}
+
+        case $option in
+            e|i|l|m|o)
+                [[ -z $options ]] && return 0
+                return 1
+                ;;
+        esac
+    done
+
+    return 1
+}
+
+_exed_complete_has_operand() {
+    local index
+    local word
+
+    index=1
+    while (( index < COMP_CWORD )); do
+        word=${COMP_WORDS[index]}
+
+        if [[ $word == -- ]]; then
+            (( index += 1 ))
+            (( index < COMP_CWORD )) && return 0
+            return 1
+        fi
+
+        if [[ $word == -* && $word != "-" ]]; then
+            if _exed_complete_word_consumes_next_arg "$word"; then
+                (( index += 2 ))
+            else
+                (( index += 1 ))
+            fi
+            continue
+        fi
+
+        [[ -n $word ]] && return 0
+        (( index += 1 ))
+    done
+
+    return 1
+}
+
+_exed_complete_compgen() {
+    local kind=$1
+    local cur=$2
+    local words=${3:-}
+    local candidate
+
+    case $kind in
+        command)
+            while IFS= read -r candidate; do
+                [[ -n $candidate ]] || continue
+                COMPREPLY+=("$candidate")
+            done < <(compgen -c -- "$cur")
+            ;;
+        file)
+            while IFS= read -r candidate; do
+                [[ -n $candidate ]] || continue
+                COMPREPLY+=("$candidate")
+            done < <(compgen -f -- "$cur")
+            ;;
+        word)
+            while IFS= read -r candidate; do
+                [[ -n $candidate ]] || continue
+                COMPREPLY+=("$candidate")
+            done < <(compgen -W "$words" -- "$cur")
+            ;;
+    esac
+}
+
+_exed_complete() {
+    local cur
+    local prev
+    local options
+
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+    options="-a -B -c -C -e -h -i -I -l -m -n -N -o -O -u -v -V"
+
+    case $prev in
+        -e)
+            _exed_complete_compgen command "$cur"
+            return 0
+            ;;
+        -i)
+            _exed_complete_compgen file "$cur"
+            return 0
+            ;;
+        -l)
+            _exed_complete_compgen word "$cur" "bash sh zsh python ruby perl php node awk sed"
+            return 0
+            ;;
+        -m)
+            _exed_complete_compgen word "$cur" "700 755 775"
+            return 0
+            ;;
+        -o)
+            return 0
+            ;;
+    esac
+
+    if [[ $cur == -* ]]; then
+        _exed_complete_compgen word "$cur" "$options"
+        return 0
+    fi
+
+    if _exed_complete_has_operand; then
+        return 0
+    fi
+
+    if _exed_complete_has_option c; then
+        _exed_complete_compgen file "$cur"
+    elif [[ $cur == */* ]]; then
+        _exed_complete_compgen file "$cur"
+    else
+        _exed_complete_compgen command "$cur"
+    fi
+}
+
+complete -o filenames -F _exed_complete exed

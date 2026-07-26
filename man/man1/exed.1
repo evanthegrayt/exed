@@ -94,6 +94,29 @@ Boolean values are false by default.
 Command-line flags override configuration values where an override exists.
 For example, \fB-N\fR unsets configured \fBenv=true\fR, and \fB-O\fR
 restores the interactive overwrite prompt.
+.SH SHELL INTEGRATION
+\fBexed\fR can be used as a standalone executable or through a sourceable shell
+plugin.
+The zsh plugin is \fBexed.plugin.zsh\fR.
+The bash plugin is \fBexed.plugin.bash\fR.
+These files add the repository's \fBbin\fR directory to \fBPATH\fR and register
+shell completion.
+They do not source the executable itself.
+.PP
+Completion files are also provided for manual installation:
+.PP
+.nf
+share/zsh/site-functions/_exed
+share/bash-completion/completions/exed
+.fi
+.SH INSTALLATION
+The included \fBinstall.sh\fR script installs \fBexed\fR as a standalone
+executable.
+By default it symlinks the executable to \fB/usr/local/bin/exed\fR, the man page
+to \fB/usr/local/share/man/man1/exed.1\fR, and completion files below
+\fB/usr/local/share\fR.
+Use \fBinstall.sh --user\fR for an installation under \fB$HOME/.local\fR, or
+\fBinstall.sh --prefix \fIDIR\fR to choose another prefix.
 .SH AUTHOR
 Written by Evan Gray.
 .SH REPORTING BUGS
