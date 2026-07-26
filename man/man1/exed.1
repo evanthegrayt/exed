@@ -1,38 +1,107 @@
 .\" Manpage for exed
 
-.TH EXED 1 "October 2013" "exed 3.1" "Development Utility Manuals"
+.TH EXED 1 "July 26, 2026" "exed 0.1.0" "Development Utility Manuals"
 .SH NAME
-\fBexed \fR\ Executable editor -
-Find executable files and open them in an editor
+\fBexed\fR \- find or create an executable and open it in an editor
 .SH SYNOPSIS
-\fBexed \fR[\fIOPTIONS\fR]... \fPFILE
-.br
-\fBexed \fR[\fB\-ahu\fP] \fR[\fB\-e \fIEDITOR\fR] \fIFILE
+\fBexed\fR [\fIOPTIONS\fP] \fIEXECUTABLE_NAME\fP
 .SH DESCRIPTION
-\fBexed\fP will find the executable \fIFILE\fP in your path and automatically open it for you in \fPEDITOR\fP. If \fPEDITOR\fP is not provided, \fBenvironmental varialbes\fP will be used (if set). If neither are available, \fPexed\fP will default to \fPvim\fP.
+\fBexed\fR finds an executable by name and opens it in an editor.
+By default, names without a slash are searched in \fBPATH\fR.
+Names containing a slash are treated as paths and must already be executable.
+.PP
+With \fB-c\fR, \fBexed\fR creates a local executable file instead of searching
+\fBPATH\fR.
+Created files get an interpreter line and executable permissions before they
+are opened.
 .SH OPTIONS
-.IP "\fB-f \fIFILE\fR"
-choose the name of the file to find and edit. \fPFILE\fP can either be called using the \fB\-f\fP option, or by it being the last parameter on the command line. The reason the \fI-f\fP option exists is to pass multiple files (\fI-f\fP can be used multiple times with different file names). NOTE: \fBexed\fP looks for \fPexecutables\fP, and they must be in your \fP$PATH\fP for \fPexed\fP to find them. It is worth noting that if you are trying to open source code (such as a ".c" file) or a ruby script that is not executable, \fPexed\fP will not be able to find it.
 .IP "\fB-a\fR"
-find \fBall\fR instances of the file and give you the choice of which one to edit. A file could have multiple copies (or links), \-OR\- if someone made a mistake, two different files could be named the same thing. The \fB-a\fP flag gives you the option to select which one you need.
+Find all matching executables in \fBPATH\fR and prompt for which one to edit.
+This option cannot be used with \fB-c\fR.
+.IP "\fB-c\fR"
+Create \fIEXECUTABLE_NAME\fR instead of finding it in \fBPATH\fR.
 .IP "\fB-e \fIEDITOR\fR"
-choose which \fIEDITOR\fP to open \fPFILE\fP in. If \fPEDITOR\fP is not passed, \fBexed\fP will default to your \fP$VISUAL\fP or \fP$EDITOR\fP global variable (see \fPENVIRONMENTAL VARIABLE\fP section below). If these are not set, \fPexed\fP will default to \fPvim\fP.
+Choose the editor to open the file in.
+If this option is not used, \fBexed\fR checks \fB$FCEDIT\fR,
+\fB$VISUAL\fR, and \fB$EDITOR\fR, in that order.
+If none are set, it defaults to \fBvim\fR.
 .IP "\fB-v\fR"
-\fBverbose\fR. If present, will display output, such as the editor the user has set and the location of the file being edited. If not set, \fBSTDERR\fP will still be printed.
+Print the selected editor and file location before opening.
 .IP "\fB-V\fR"
-Prints \fBversion\fP and exits.
-.IP "\fB-h"
-display short help and exit
-.IP "\fB-u"
-display usage
-.SH ENVIRONMENTAL VARIALBES
-If no \fIEDITOR\fP is passed as an argument, \fBexed\fP will check your \fPenvironmental variables\fP for either \fP$VISUAL\fP or \fP$EDITOR\fP to be set. You can set your default editor by adding \fPexport VISUAL=\fInano\fR (or whatever you prefer) to a blank line in a startup file (I.E.: your \fB~/.bashrc\fP). NOTE: bash will always try to use \fB$VISUAL\fP before \fP$EDITOR\fP, and therefor is the order \fPexed\fP uses.
+Print version information and exit.
+.IP "\fB-u\fR"
+Display usage.
+.IP "\fB-h\fR"
+Display short help.
+.SH CREATION OPTIONS
+The following options can only be used with \fB-c\fR.
+.IP "\fB-l \fILANGUAGE\fR"
+Choose the language for the created file.
+The default language is \fBbash\fR unless configured otherwise.
+.IP "\fB-i \fIINTERPRETER\fR"
+Use a custom interpreter path.
+Pass only the path; \fBexed\fR adds \fB#!\fR automatically.
+.IP "\fB-n\fR"
+Use \fB/usr/bin/env \fILANGUAGE\fR instead of resolving the interpreter path
+immediately.
+.IP "\fB-N\fR"
+Unset a configured \fBenv=true\fR option from \fB~/.exedrc\fR.
+.IP "\fB-m \fIMODE\fR"
+Set permissions for the created file.
+By default, permissions are set to \fB755\fR.
+Permissions must be a three-digit chmod-style value, such as \fB755\fR or
+\fB700\fR, and the owner must have execute permission.
+.IP "\fB-o \fIOPTION\fR"
+Add an option after the interpreter line.
+For example, \fB-o -x\fR can be used with \fBbash\fR.
+.IP "\fB-I\fR"
+Write \fBIFS=$'\\n'\fR below the interpreter line.
+This option is accepted only with \fBbash\fR, \fBsh\fR, and \fBzsh\fR.
+.IP "\fB-C\fR"
+Clobber.
+If the file exists, overwrite it without asking.
+.IP "\fB-B\fR"
+No-clobber.
+If the file exists, report an error and exit.
+.IP "\fB-O\fR"
+Prompt before overwriting an existing file.
+This is the default and is useful for overriding \fBclobber=true\fR in
+\fB~/.exedrc\fR.
 .SH ENVIRONMENT
-Deployable on most *nix\-based environments.
+.IP "\fBFCEDIT\fR"
+First editor fallback checked when \fB-e\fR is not passed.
+.IP "\fBVISUAL\fR"
+Second editor fallback checked when \fB-e\fR is not passed.
+.IP "\fBEDITOR\fR"
+Third editor fallback checked when \fB-e\fR is not passed.
+.SH CONFIGURATION FILES
+\fBexed\fR accepts a configuration file at \fB~/.exedrc\fR.
+Available variables are:
+.PP
+.nf
+all_in_path=true
+editor=EDITOR
+verbose=true
+language=LANGUAGE
+perms=MODE
+env=true
+clobber=true
+clobber_mode=clobber
+clobber_mode=noclobber
+clobber_mode=interactive
+setifs=true
+.fi
+.PP
+Boolean values are false by default.
+Command-line flags override configuration values where an override exists.
+For example, \fB-N\fR unsets configured \fBenv=true\fR, and \fB-O\fR
+restores the interactive overwrite prompt.
 .SH AUTHOR
 Written by Evan Gray.
 .SH REPORTING BUGS
-Report bugs to <\fIegray1985@gmail.com\fP>
+Report bugs at <\fIhttps://github.com/evanthegrayt/exed/issues\fR>.
 .SH COPYRIGHT
-Copyright (C) 2017, Evan Gray.  All rights reserved.  There is NO WARRANTY, to the extent permitted by law.
-
+Copyright (C) 2017, Evan Gray.  All rights reserved.  There is NO WARRANTY,
+to the extent permitted by law.
+.SH SEE ALSO
+\fBchmod\fR(1), \fBenv\fR(1), \fBvim\fR(1)
