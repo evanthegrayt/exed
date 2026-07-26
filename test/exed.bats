@@ -58,6 +58,194 @@ make_recording_editor() {
     [[ $output == *"declare -r IFS_LINE"* ]]
 }
 
+@test "bash plugin exposes executable and completion without sourcing executable" {
+    run bash --noprofile --norc -c 'PATH=/usr/bin:/bin; source "$1"; command -v exed; complete -p exed' _ "$REPO_ROOT/exed.plugin.bash"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"$REPO_ROOT/bin/exed"* ]]
+    [[ $output == *"complete"* ]]
+    [[ $output == *"_exed_complete"* ]]
+}
+
+@test "bash completion distinguishes option arguments from the executable operand" {
+    run bash --noprofile --norc -c '
+        source "$1"
+
+        COMP_WORDS=(exed foo "")
+        COMP_CWORD=2
+        _exed_complete
+        printf "after_operand=%s\n" "${#COMPREPLY[@]}"
+
+        COMP_WORDS=(exed -c -l bash "")
+        COMP_CWORD=4
+        _exed_complete
+        printf "create_candidates=%s\n" "${#COMPREPLY[@]}"
+    ' _ "$REPO_ROOT/share/bash-completion/completions/exed"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"after_operand=0"* ]]
+    [[ $output == *"create_candidates="* ]]
+    [[ $output != *"create_candidates=0"* ]]
+}
+
+@test "bash completion completes PATH commands in find mode" {
+    local target="$PATH_FIXTURES/exed-fixture-command"
+
+    make_executable "$target"
+
+    run bash --noprofile --norc -c '
+        source "$1"
+        PATH="$2"
+        COMP_WORDS=(exed exed-fixt)
+        COMP_CWORD=1
+        _exed_complete
+        printf "%s\n" "${COMPREPLY[@]}"
+    ' _ "$REPO_ROOT/share/bash-completion/completions/exed" "$PATH_FIXTURES"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"exed-fixture-command"* ]]
+}
+
+@test "bash completion completes files in create mode" {
+    local target="$BATS_TEST_TMPDIR/completion-script"
+
+    printf '%s\n' "draft" > "$target"
+
+    run bash --noprofile --norc -c '
+        source "$1"
+        COMP_WORDS=(exed -c "$2")
+        COMP_CWORD=2
+        _exed_complete
+        printf "%s\n" "${COMPREPLY[@]}"
+    ' _ "$REPO_ROOT/share/bash-completion/completions/exed" "$BATS_TEST_TMPDIR/completion-s"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"$target"* ]]
+}
+
+@test "zsh plugin exposes executable and completion" {
+    command -v zsh >/dev/null 2>&1 || skip "zsh is not installed"
+
+    run zsh -f -c 'source "$1"; command -v exed; print -r -- ${fpath[1]}; (( $+functions[_exed] ))' _ "$REPO_ROOT/exed.plugin.zsh"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"$REPO_ROOT/bin/exed"* ]]
+    [[ $output == *"$REPO_ROOT/share/zsh/site-functions"* ]]
+}
+
+@test "zsh plugin works from an Oh My Zsh custom plugin directory" {
+    command -v zsh >/dev/null 2>&1 || skip "zsh is not installed"
+
+    local custom="$BATS_TEST_TMPDIR/oh-my-zsh/custom"
+
+    mkdir -p "$custom/plugins"
+    ln -s "$REPO_ROOT" "$custom/plugins/exed"
+
+    run zsh -f -c 'source "$1/plugins/exed/exed.plugin.zsh"; command -v exed; print -r -- ${path[1]}; print -r -- ${fpath[1]}' _ "$custom"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"$REPO_ROOT/bin/exed"* ]]
+    [[ $output == *"$REPO_ROOT/bin"* ]]
+    [[ $output == *"$REPO_ROOT/share/zsh/site-functions"* ]]
+}
+
+@test "zsh plugin keeps PATH changes when sourced from a function" {
+    command -v zsh >/dev/null 2>&1 || skip "zsh is not installed"
+
+    run zsh -f -c 'load_plugin() { source "$1"; }; load_plugin "$1"; command -v exed; print -r -- ${path[1]}; print -r -- ${fpath[1]}' _ "$REPO_ROOT/exed.plugin.zsh"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"$REPO_ROOT/bin/exed"* ]]
+    [[ $output == *"$REPO_ROOT/bin"* ]]
+    [[ $output == *"$REPO_ROOT/share/zsh/site-functions"* ]]
+}
+
+@test "installer installs executable, man page, and completions under prefix" {
+    local prefix="$BATS_TEST_TMPDIR/prefix"
+
+    run "$REPO_ROOT/install.sh" --prefix "$prefix"
+
+    [ "$status" -eq 0 ]
+    [ -L "$prefix/bin/exed" ]
+    [ -L "$prefix/share/man/man1/exed.1" ]
+    [ -L "$prefix/share/zsh/site-functions/_exed" ]
+    [ -L "$prefix/share/bash-completion/completions/exed" ]
+}
+
+@test "installer copy mode creates regular files with expected modes" {
+    local prefix="$BATS_TEST_TMPDIR/copy-prefix"
+
+    run "$REPO_ROOT/install.sh" --prefix "$prefix" --copy
+
+    [ "$status" -eq 0 ]
+    [ -f "$prefix/bin/exed" ]
+    [ ! -L "$prefix/bin/exed" ]
+    [ "$(file_mode "$prefix/bin/exed")" = "755" ]
+    [ -f "$prefix/share/man/man1/exed.1" ]
+    [ "$(file_mode "$prefix/share/man/man1/exed.1")" = "644" ]
+    [ -f "$prefix/share/zsh/site-functions/_exed" ]
+    [ "$(file_mode "$prefix/share/zsh/site-functions/_exed")" = "644" ]
+    [ -f "$prefix/share/bash-completion/completions/exed" ]
+    [ "$(file_mode "$prefix/share/bash-completion/completions/exed")" = "644" ]
+}
+
+@test "installer refuses to overwrite existing files without force" {
+    local prefix="$BATS_TEST_TMPDIR/refuse-prefix"
+
+    run "$REPO_ROOT/install.sh" --prefix "$prefix" --no-man --no-completions
+    [ "$status" -eq 0 ]
+
+    run "$REPO_ROOT/install.sh" --prefix "$prefix" --no-man --no-completions
+
+    [ "$status" -eq 1 ]
+    [[ $output == *"Refusing to replace existing file:"* ]]
+    [[ $output == *"/bin/exed"* ]]
+}
+
+@test "installer force replaces existing files" {
+    local prefix="$BATS_TEST_TMPDIR/force-prefix"
+
+    mkdir -p "$prefix/bin"
+    printf '%s\n' "old" > "$prefix/bin/exed"
+
+    run "$REPO_ROOT/install.sh" --prefix "$prefix" --force --no-man --no-completions
+
+    [ "$status" -eq 0 ]
+    [ -L "$prefix/bin/exed" ]
+    [ "$(readlink "$prefix/bin/exed")" = "$REPO_ROOT/bin/exed" ]
+}
+
+@test "installer can skip man page and completions" {
+    local prefix="$BATS_TEST_TMPDIR/minimal-prefix"
+
+    run "$REPO_ROOT/install.sh" --prefix "$prefix" --no-man --no-completions
+
+    [ "$status" -eq 0 ]
+    [ -L "$prefix/bin/exed" ]
+    [ ! -e "$prefix/share/man/man1/exed.1" ]
+    [ ! -e "$prefix/share/zsh/site-functions/_exed" ]
+    [ ! -e "$prefix/share/bash-completion/completions/exed" ]
+}
+
+@test "installer user mode installs under home local prefix" {
+    local home="$BATS_TEST_TMPDIR/install-home"
+
+    run env HOME="$home" "$REPO_ROOT/install.sh" --user --no-man --no-completions
+
+    [ "$status" -eq 0 ]
+    [ -L "$home/.local/bin/exed" ]
+}
+
+@test "installer rejects unknown options and missing prefix arguments" {
+    run "$REPO_ROOT/install.sh" --definitely-not-real
+    [ "$status" -eq 1 ]
+    [[ $output == *"Unknown option: --definitely-not-real"* ]]
+
+    run "$REPO_ROOT/install.sh" --prefix
+    [ "$status" -eq 1 ]
+    [[ $output == *"--prefix requires a directory."* ]]
+}
+
 @test "default mode opens first executable found in PATH" {
     local target="$PATH_FIXTURES/existing"
     local opened="$BATS_TEST_TMPDIR/opened"
