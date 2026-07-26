@@ -45,6 +45,17 @@ make_recording_editor() {
     chmod +x "$editor"
 }
 
+make_arg_recording_editor() {
+    local editor=$1
+    local record_file=$2
+
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf 'printf "%%s\\n" "$@" > %q\n' "$record_file"
+    } > "$editor"
+    chmod +x "$editor"
+}
+
 @test "script can be sourced without running main" {
     run bash -c 'source "$1"; print_usage; declare -p PROGRAM VERSION USAGE DEFAULT_LANGUAGE DEFAULT_PERMS IFS_LINE' _ "$EXED"
 
@@ -259,6 +270,22 @@ make_recording_editor() {
     [ -e "$opened" ]
 }
 
+@test "editor option accepts flags before the opened file" {
+    local target="$PATH_FIXTURES/existing"
+    local editor="$BATS_TEST_TMPDIR/record-editor-args"
+    local opened="$BATS_TEST_TMPDIR/opened-args"
+
+    make_executable "$target"
+    make_arg_recording_editor "$editor" "$opened"
+
+    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" VISUAL= EDITOR= \
+        "$EXED" -e "$editor --wait" existing
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$opened")" = "--wait" ]
+    [ "$(line_at 2 "$opened")" = "$target" ]
+}
+
 @test "all matches mode prompts and opens the selected PATH match" {
     local first_dir="$BATS_TEST_TMPDIR/first-path"
     local second_dir="$BATS_TEST_TMPDIR/second-path"
@@ -387,6 +414,39 @@ make_recording_editor() {
     [ "$(line_at 1 "$file")" = "#!$ENV_PATH bash" ]
     [ "$(line_at 2 "$file")" = "IFS=\$'\\n'" ]
     [ "$(file_mode "$file")" = "700" ]
+}
+
+@test "configured editor accepts flags before the opened file" {
+    local target="$PATH_FIXTURES/config-existing"
+    local editor="$BATS_TEST_TMPDIR/config-record-editor-args"
+    local opened="$BATS_TEST_TMPDIR/config-opened-args"
+
+    make_executable "$target"
+    make_arg_recording_editor "$editor" "$opened"
+    printf 'editor=%q\n' "$editor --wait" > "$TEST_HOME/.exedrc"
+
+    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" VISUAL= EDITOR= \
+        "$EXED" config-existing
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$opened")" = "--wait" ]
+    [ "$(line_at 2 "$opened")" = "$target" ]
+}
+
+@test "VISUAL fallback accepts flags before the opened file" {
+    local target="$PATH_FIXTURES/visual-existing"
+    local editor="$BATS_TEST_TMPDIR/visual-record-editor-args"
+    local opened="$BATS_TEST_TMPDIR/visual-opened-args"
+
+    make_executable "$target"
+    make_arg_recording_editor "$editor" "$opened"
+
+    run env PATH="$PATH_FIXTURES:$PATH" HOME="$TEST_HOME" VISUAL="$editor --wait" EDITOR= \
+        "$EXED" visual-existing
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$opened")" = "--wait" ]
+    [ "$(line_at 2 "$opened")" = "$target" ]
 }
 
 @test "permissions must give the owner execute permission" {

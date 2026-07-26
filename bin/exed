@@ -91,7 +91,7 @@ resolve_command() {
 }
 
 set_editor() {
-    printf '%s\n' ${VISUAL:-${EDITOR:-vi}}
+    printf '%s\n' "${VISUAL:-${EDITOR:-vi}}"
 }
 
 editor_available() {

@@ -101,6 +101,13 @@ Useful options:
 
 Run `exed -h` to see all available options.
 
+Editor values can include simple flags. For example:
+
+```sh
+exed -e "code -w" my-script
+exed -e "vim -p" my-script
+```
+
 ## Environment Variables
 If no editor is passed with `-e`, `exed` will check your environment for
 `$VISUAL`, and `$EDITOR`, in that order. It is recommended to use these
@@ -125,6 +132,13 @@ a file in your home directory called `.exedrc`. Available variables:
 - `clobber_mode=clobber`, `clobber_mode=noclobber`, or
   `clobber_mode=interactive`
 - `set_ifs=true` (same as passing `-I`)
+
+The `editor` value can also include simple flags, such as:
+
+```sh
+editor="code -w"
+editor="vim -p"
+```
 
 All boolean values are `false` by default. Any variables set in the
 configuration file can be overwritten by flags when initiating the program. For
