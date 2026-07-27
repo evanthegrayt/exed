@@ -81,7 +81,7 @@ your system's bash-completion setup loads command completions.
 Open an executable that already exists in your `PATH`:
 
 ```sh
-exed ruby
+exed my_shell_script
 ```
 
 Create a new executable file:
@@ -98,9 +98,14 @@ Useful options:
 - `-e EDITOR`: choose an editor
 - `-l LANGUAGE`: choose the language for a created file
 - `-m MODE`: choose permissions for a created file
-- `-n`: use `/usr/bin/env LANGUAGE` for a created file
+- `-n`: use `env` from `PATH` with `LANGUAGE` for a created file
 - `-I`: add `IFS=$'\n'` for created `bash`, `sh`, or `zsh` files
 - `-v`: print the executable location before opening it
+
+Interpreter lines are resolved from your current `PATH` by default. For example,
+`exed -c -l bash script` writes the path returned by `command -v bash`. If your
+`PATH` finds a custom Bash installation first, but you specifically want
+`#!/bin/bash`, pass `-i /bin/bash`.
 
 Run `exed -h` to see all available options.
 

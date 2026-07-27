@@ -40,12 +40,16 @@ The following options can only be used with \fB-c\fR.
 .IP "\fB-l \fILANGUAGE\fR"
 Choose the language for the created file.
 The default language is \fBbash\fR unless configured otherwise.
+Unless \fB-n\fR is used, \fBexed\fR resolves \fILANGUAGE\fR from the current
+\fBPATH\fR and writes that path in the interpreter line.
 .IP "\fB-i \fIINTERPRETER\fR"
 Use a custom interpreter path.
 Pass only the path; \fBexed\fR adds \fB#!\fR automatically.
+For example, if \fBbash\fR resolves to a Homebrew install but the script should
+use \fB/bin/bash\fR, pass \fB-i /bin/bash\fR.
 .IP "\fB-n\fR"
-Use \fB/usr/bin/env \fILANGUAGE\fR instead of resolving the interpreter path
-immediately.
+Use \fBenv\fR from \fBPATH\fR with \fILANGUAGE\fR instead of resolving the
+interpreter path immediately.
 .IP "\fB-N\fR"
 Unset a configured \fBenv=true\fR option from \fB~/.exedrc\fR.
 .IP "\fB-m \fIMODE\fR"

@@ -45,7 +45,7 @@ print_help() {
     -c                  | create EXECUTABLE instead of finding it in PATH
     -l LANGUAGE         | language to use when creating (default: bash)
     -i INTERPRETER      | custom interpreter path; $PROGRAM adds '#!'
-    -n                  | use /usr/bin/env LANGUAGE for created files
+    -n                  | use env from PATH with LANGUAGE for created files
     -N                  | unset configured env option
     -m MODE             | chmod-style mode for created files (default: 755)
                         + owner must have execute permission

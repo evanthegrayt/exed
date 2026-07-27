@@ -25,7 +25,7 @@ _exed() {
     '-I[set IFS line in created bash, sh, or zsh files]' \
     '-l+[language for created files]:language:(bash sh zsh python ruby perl php node awk sed)' \
     '-m+[chmod-style mode for created files]:mode:(700 755 775)' \
-    '-n[use /usr/bin/env LANGUAGE for created files]' \
+    '-n[use env from PATH with LANGUAGE for created files]' \
     '-N[unset configured env option]' \
     '-o+[add option after interpreter line]:interpreter option:' \
     '-O[prompt before overwriting in create mode]' \
