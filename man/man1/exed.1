@@ -24,7 +24,9 @@ Create \fIEXECUTABLE_NAME\fR instead of finding it in \fBPATH\fR.
 Choose the editor to open the file in.
 If this option is not used, \fBexed\fR checks \fB$VISUAL\fR, and \fB$EDITOR\fR,
 in that order.
-If none are set, it defaults to \fBvim\fR.
+If none are set, it defaults to \fBvi\fR.
+The editor may include simple flags, such as \fB-e "code -w"\fR or
+\fB-e "vim -p"\fR.
 .IP "\fB-v\fR"
 Print the selected editor and file location before opening.
 .IP "\fB-V\fR"
@@ -91,6 +93,8 @@ set_ifs=true
 .fi
 .PP
 Boolean values are false by default.
+The \fBeditor\fR value may include simple flags, such as
+\fBeditor="code -w"\fR or \fBeditor="vim -p"\fR.
 Command-line flags override configuration values where an override exists.
 For example, \fB-N\fR unsets configured \fBenv=true\fR, and \fB-O\fR
 restores the interactive overwrite prompt.
