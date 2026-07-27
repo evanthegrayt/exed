@@ -102,6 +102,8 @@ Useful options:
 - `-n`: use `env` from `PATH` with `LANGUAGE` for a created file
 - `-t TEMPLATE`: use a language-scoped template for a created file
 - `-T`: unset a configured `template=NAME`
+- `-L`: list available templates
+- `-P`: preview the selected template
 - `-I`: add `IFS=$'\n'` for created `bash` or `zsh` files
 - `-v`: print the executable location before opening it
 
@@ -117,15 +119,24 @@ Templates are searched by language and name. For example:
 ```sh
 exed -c -l bash -t strict my_bash_script
 exed -c -l ruby -t cli my_ruby_script
+exed -L
+exed -l bash -L
+exed -l bash -t strict -P
 ```
 
 With `-l bash -t strict`, `exed` looks for `bash/strict`; it does not search
 templates for other languages. If `template_dir=DIR` is configured, `exed`
 checks `DIR/LANGUAGE/TEMPLATE` before the built-in
 `share/exed/templates/LANGUAGE/TEMPLATE`, so personal templates can override
-the defaults. Templates are plain text files and may include `{{shebang}}`,
+the built-ins. Built-in templates are reserved for useful scaffolds beyond the
+standard generated shebang. Templates are plain text files and may include `{{shebang}}`,
 `{{language}}`, and `{{file}}`. When `{{shebang}}` is omitted, `exed` prepends
 the interpreter line automatically.
+
+Use `-L` to list templates, optionally scoped by `-l LANGUAGE`. Use `-P` to
+render the selected or configured template to standard output without creating
+or opening a file. If `-P` is added to a create command, `exed` previews the
+rendered file and prints a warning instead of writing, chmodding, or opening it.
 
 Editor values can include simple flags. For example:
 

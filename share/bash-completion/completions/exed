@@ -113,6 +113,95 @@ _exed_complete_compgen() {
     esac
 }
 
+_exed_complete_option_arg() {
+    local requested=$1
+    local index
+    local word
+    local option
+    local options
+
+    index=1
+    while (( index < COMP_CWORD )); do
+        word=${COMP_WORDS[index]}
+        [[ $word == -- ]] && return 1
+        if [[ $word != -* || $word == "-" ]]; then
+            (( index += 1 ))
+            continue
+        fi
+
+        options=${word#-}
+        while [[ -n $options ]]; do
+            option=${options%"${options#?}"}
+            options=${options#?}
+
+            if [[ $option == "$requested" ]]; then
+                if [[ -n $options ]]; then
+                    printf '%s\n' "$options"
+                elif (( index + 1 < COMP_CWORD )); then
+                    printf '%s\n' "${COMP_WORDS[index+1]}"
+                fi
+                return 0
+            fi
+
+            case $option in
+                e|i|l|m|o|t)
+                    break
+                    ;;
+            esac
+        done
+
+        if _exed_complete_word_consumes_next_arg "$word"; then
+            (( index += 2 ))
+        else
+            (( index += 1 ))
+        fi
+    done
+
+    return 1
+}
+
+_exed_complete_exed_command() {
+    local completion_file
+    local completion_dir
+    local bundled_exed
+
+    completion_file=${BASH_SOURCE[0]}
+    completion_dir=$(cd -P "$(dirname "$completion_file")" >/dev/null 2>&1 && pwd) || return 1
+    bundled_exed=$completion_dir/../../../bin/exed
+
+    if [[ -x $bundled_exed ]]; then
+        printf '%s\n' "$bundled_exed"
+        return 0
+    fi
+
+    if command -v exed >/dev/null 2>&1; then
+        command -v exed
+        return 0
+    fi
+
+    return 1
+}
+
+_exed_complete_template_words() {
+    local exed_command
+    local language
+    local line
+    local -a args
+
+    exed_command=$(_exed_complete_exed_command) || return 0
+    language=$(_exed_complete_option_arg l)
+    args=(-L)
+
+    if [[ -n $language ]]; then
+        args=(-l "$language" -L)
+    fi
+
+    while IFS= read -r line; do
+        [[ $line == "  "* ]] || continue
+        printf '%s\n' "${line#"  "}"
+    done < <("$exed_command" "${args[@]}" 2>/dev/null)
+}
+
 _exed_complete() {
     local cur
     local prev
@@ -121,7 +210,7 @@ _exed_complete() {
     COMPREPLY=()
     cur=${COMP_WORDS[COMP_CWORD]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
-    options="-a -B -c -C -e -h -i -I -l -m -n -N -o -O -t -T -v -V"
+    options="-a -B -c -C -e -h -i -I -l -L -m -n -N -o -O -P -t -T -v -V"
 
     case $prev in
         -e)
@@ -144,7 +233,7 @@ _exed_complete() {
             return 0
             ;;
         -t)
-            _exed_complete_compgen word "$cur" "default strict portable cli"
+            _exed_complete_compgen word "$cur" "$(_exed_complete_template_words)"
             return 0
             ;;
     esac

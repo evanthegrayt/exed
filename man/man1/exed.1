@@ -62,6 +62,15 @@ If \fBtemplate_dir\fR is configured, that directory is searched before the
 built-in templates.
 .IP "\fB-T\fR"
 Unset a configured \fBtemplate=\fITEMPLATE\fR option from \fB~/.exedrc\fR.
+.IP "\fB-L\fR"
+List available templates and exit.
+Use with \fB-l \fILANGUAGE\fR to list templates for one language.
+.IP "\fB-P\fR"
+Preview the selected or configured template and exit.
+The rendered template is written to standard output without creating or opening
+a file.
+If \fB-P\fR is added to a create command, \fBexed\fR prints a warning and does
+not write, chmod, or open the file.
 .IP "\fB-o \fIOPTION\fR"
 Add an option after the interpreter line.
 For example, \fB-o -x\fR can be used with \fBbash\fR.
@@ -116,12 +125,21 @@ not search templates for other languages.
 If \fBtemplate_dir=DIR\fR is configured, \fBexed\fR checks
 \fBDIR/LANGUAGE/TEMPLATE\fR before the built-in
 \fBshare/exed/templates/LANGUAGE/TEMPLATE\fR, so personal templates can
-override the defaults.
+override the built-ins.
+.PP
+Built-in templates are reserved for useful scaffolds beyond the standard
+generated shebang.
 .PP
 Templates are plain text files.
 They may include \fB{{shebang}}\fR, \fB{{language}}\fR, and \fB{{file}}\fR.
 When \fB{{shebang}}\fR is omitted, \fBexed\fR prepends the interpreter line
 automatically.
+.PP
+Use \fB-L\fR to list templates, optionally scoped by \fB-l \fILANGUAGE\fR.
+Use \fB-P\fR with \fB-t \fITEMPLATE\fR, or with a configured
+\fBtemplate=\fINAME\fR, to preview the rendered template on standard output.
+When \fB-P\fR is combined with \fB-c\fR, preview mode wins and no file is
+created.
 .SH SHELL INTEGRATION
 \fBexed\fR can be used as a standalone executable or through a sourceable shell
 plugin.

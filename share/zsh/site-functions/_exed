@@ -10,6 +10,31 @@ _exed_target() {
   fi
 }
 
+_exed_template_words() {
+  local language line
+  local -a args
+
+  if (( ${+opt_args[-l]} )); then
+    language=${opt_args[-l]}
+    args=(-l "$language" -L)
+  else
+    args=(-L)
+  fi
+
+  command exed "${args[@]}" 2>/dev/null | while IFS= read -r line; do
+    [[ $line == "  "* ]] || continue
+    print -r -- "${line#  }"
+  done
+}
+
+_exed_templates() {
+  local -a templates
+
+  templates=(${(f)"$(_exed_template_words)"})
+  (( ${#templates} )) || return 1
+  _describe -t templates 'template' templates
+}
+
 _exed() {
   local context state line
   typeset -A opt_args
@@ -24,12 +49,14 @@ _exed() {
     '-i+[custom interpreter path]:interpreter:_files' \
     '-I[set IFS line in created bash or zsh files]' \
     '-l+[language for created files]:language:(bash sh zsh python ruby perl php node awk sed)' \
+    '-L[list available templates]' \
     '-m+[chmod-style mode for created files]:mode:(700 755 775)' \
     '-n[use env from PATH with LANGUAGE for created files]' \
     '-N[unset configured env option]' \
     '-o+[add option after interpreter line]:interpreter option:' \
     '-O[prompt before overwriting in create mode]' \
-    '-t+[use language-scoped template for created files]:template:(default strict portable cli)' \
+    '-P[preview selected template]' \
+    '-t+[use language-scoped template for created files]:template:->template' \
     '-T[unset configured template option]' \
     '-v[print editor and file location before opening]' \
     '-V[print version and exit]' \
@@ -37,6 +64,7 @@ _exed() {
 
   case $state in
     target) _exed_target ;;
+    template) _exed_templates ;;
   esac
 }
 
