@@ -22,13 +22,15 @@ _exed() {
     '-e+[choose editor]:editor:_command_names' \
     '-h[print help and exit]' \
     '-i+[custom interpreter path]:interpreter:_files' \
-    '-I[set IFS line in created bash, sh, or zsh files]' \
+    '-I[set IFS line in created bash or zsh files]' \
     '-l+[language for created files]:language:(bash sh zsh python ruby perl php node awk sed)' \
     '-m+[chmod-style mode for created files]:mode:(700 755 775)' \
     '-n[use env from PATH with LANGUAGE for created files]' \
     '-N[unset configured env option]' \
     '-o+[add option after interpreter line]:interpreter option:' \
     '-O[prompt before overwriting in create mode]' \
+    '-t+[use language-scoped template for created files]:template:(default strict portable cli)' \
+    '-T[unset configured template option]' \
     '-u[print usage and exit]' \
     '-v[print editor and file location before opening]' \
     '-V[print version and exit]' \

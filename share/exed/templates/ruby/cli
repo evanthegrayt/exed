@@ -1,0 +1,7 @@
+{{shebang}}
+# frozen_string_literal: true
+
+def main
+end
+
+main if $PROGRAM_NAME == __FILE__

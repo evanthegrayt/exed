@@ -8,6 +8,9 @@ readonly USAGE="USAGE: $PROGRAM [OPTIONS...] EXECUTABLE_NAME"
 readonly DEFAULT_LANGUAGE=bash
 readonly DEFAULT_PERMS=755
 readonly IFS_LINE="IFS=\$'\\n'"
+readonly SHEBANG_TOKEN="{{shebang}}"
+readonly LANGUAGE_TOKEN="{{language}}"
+readonly FILE_TOKEN="{{file}}"
 
 reset_runtime_state() {
     ALL_IN_PATH=false
@@ -23,6 +26,9 @@ reset_runtime_state() {
     INTERPRETER_OPTION=
     LANGUAGE=
     PERMS=
+    TEMPLATE=
+    TEMPLATE_DIR=
+    TEMPLATE_FILE=
     USE_ENV=false
     VERBOSE=false
 }
@@ -49,8 +55,10 @@ print_help() {
     -N                  | unset configured env option
     -m MODE             | chmod-style mode for created files (default: 755)
                         + owner must have execute permission
+    -t TEMPLATE         | use language-scoped template for created files
+    -T                  | unset configured template option
     -o OPTION           | add OPTION after the interpreter line
-    -I                  | set Internal Field Separator (IFS) in bash, sh, and zsh
+    -I                  | set Internal Field Separator (IFS) in bash and zsh
     -C                  | clobber existing files in create mode
     -B                  | fail if file exists in create mode
     -O                  | prompt before overwriting in create mode (default)
@@ -134,6 +142,96 @@ set_custom_interpreter() {
     printf '#!%s\n' "$interpreter"
 }
 
+built_in_template_dir() {
+    local bin_dir
+
+    bin_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P) || return 1
+    printf '%s\n' "$bin_dir/../share/exed/templates"
+}
+
+validate_template_segment() {
+    local kind=$1
+    local value=$2
+
+    case $value in
+        ""|.|..|*/*)
+            abort "$kind [$value] cannot be used as a template path segment."
+            ;;
+    esac
+}
+
+find_template() {
+    local language=$1
+    local template=$2
+    local built_in_dir
+    local candidate
+
+    validate_template_segment "Language" "$language"
+    validate_template_segment "Template" "$template"
+
+    if [[ -n ${TEMPLATE_DIR:-} ]]; then
+        [[ -d $TEMPLATE_DIR ]] || abort "Template directory [$TEMPLATE_DIR] does not exist."
+
+        candidate=$TEMPLATE_DIR/$language/$template
+        if [[ -f $candidate ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    fi
+
+    built_in_dir=$(built_in_template_dir) || abort "Could not resolve built-in template directory."
+    candidate=$built_in_dir/$language/$template
+    if [[ -f $candidate ]]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    abort "Template [$template] for language [$language] was not found."
+}
+
+template_has_shebang_token() {
+    local template_file=$1
+    local line
+
+    while IFS= read -r line || [[ -n $line ]]; do
+        [[ $line == *"$SHEBANG_TOKEN"* ]] && return 0
+    done < "$template_file"
+
+    return 1
+}
+
+render_template_body() {
+    local template_file=$1
+    local file=$2
+    local shebang=$3
+    local line
+
+    while IFS= read -r line || [[ -n $line ]]; do
+        line=${line//$SHEBANG_TOKEN/$shebang}
+        line=${line//$LANGUAGE_TOKEN/$LANGUAGE}
+        line=${line//$FILE_TOKEN/$file}
+        printf '%s\n' "$line"
+    done < "$template_file"
+}
+
+render_template() {
+    local template_file=$1
+    local file=$2
+    local shebang
+
+    shebang=$INTERPRETER$INTERPRETER_OPTION
+    if [[ -n ${IFS_SETTING:-} ]]; then
+        shebang="${shebang}"$'\n'"$IFS_SETTING"
+    fi
+
+    if template_has_shebang_token "$template_file"; then
+        render_template_body "$template_file" "$file" "$shebang"
+    else
+        printf '%s\n\n' "$shebang"
+        render_template_body "$template_file" "$file" "$shebang"
+    fi
+}
+
 validate_permissions() {
     local perms=$1
 
@@ -148,7 +246,7 @@ validate_permissions() {
 
 is_ifs_compatible() {
     case $1 in
-        bash|sh|zsh) return 0 ;;
+        bash|zsh) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -274,14 +372,18 @@ write_file() {
     local file=$1
 
     {
-        printf '%s%s\n' "$INTERPRETER" "${INTERPRETER_OPTION:-}"
+        if [[ -n ${TEMPLATE_FILE:-} ]]; then
+            render_template "$TEMPLATE_FILE" "$file"
+        else
+            printf '%s%s\n' "$INTERPRETER" "${INTERPRETER_OPTION:-}"
 
-        if [[ -n ${IFS_SETTING:-} ]]; then
-            printf '%s\n' "$IFS_SETTING"
-        fi
+            if [[ -n ${IFS_SETTING:-} ]]; then
+                printf '%s\n' "$IFS_SETTING"
+            fi
 
-        if [[ $LANGUAGE == "php" ]]; then
-            printf '<?php\n\n?>\n'
+            if [[ $LANGUAGE == "php" ]]; then
+                printf '<?php\n\n?>\n'
+            fi
         fi
     } > "$file" || abort "Could not write [$file]."
 }
@@ -298,6 +400,8 @@ load_config() {
     EDITOR_CMD=${EDITOR_CMD:-${editor:-}}
     LANGUAGE=${LANGUAGE:-${language:-${lang:-}}}
     PERMS=${PERMS:-${perms:-}}
+    TEMPLATE=${template:-$TEMPLATE}
+    TEMPLATE_DIR=${template_dir:-$TEMPLATE_DIR}
     USE_ENV=${env:-$USE_ENV}
     VERBOSE=${verbose:-$VERBOSE}
     CLOBBER_MODE=${CLOBBER_MODE:-${clobber_mode:-}}
@@ -324,7 +428,7 @@ parse_args() {
     local opt
 
     OPTIND=1
-    while getopts ":aBcCe:hi:Il:m:nNo:OuvV" opt; do
+    while getopts ":aBcCe:hi:Il:m:nNo:Ot:TuvV" opt; do
         case $opt in
             a)
                 ALL_IN_PATH=true
@@ -385,6 +489,14 @@ parse_args() {
                 CLOBBER_MODE=interactive
                 mark_create_option
                 ;;
+            t)
+                TEMPLATE=$OPTARG
+                mark_create_option
+                ;;
+            T)
+                TEMPLATE=
+                mark_create_option
+                ;;
             u)
                 print_usage
                 exit 0
@@ -437,12 +549,16 @@ prepare_create() {
     validate_permissions "$PERMS"
 
     if [[ -n ${IFS_SETTING:-} ]] && ! is_ifs_compatible "$LANGUAGE"; then
-        printf '%s\n' "'-I' is only compatible with bash, sh, and zsh," >&2
+        printf '%s\n' "'-I' is only compatible with bash and zsh," >&2
         abort "as it sets the Internal Field Separator."
     fi
 
     if [[ -z ${INTERPRETER:-} ]]; then
         INTERPRETER=$(set_interpreter "$LANGUAGE" "$USE_ENV") || exit "$?"
+    fi
+
+    if [[ -n ${TEMPLATE:-} ]]; then
+        TEMPLATE_FILE=$(find_template "$LANGUAGE" "$TEMPLATE") || exit "$?"
     fi
 }
 

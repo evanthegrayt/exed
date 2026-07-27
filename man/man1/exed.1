@@ -57,12 +57,19 @@ Set permissions for the created file.
 By default, permissions are set to \fB755\fR.
 Permissions must be a three-digit chmod-style value, such as \fB755\fR or
 \fB700\fR, and the owner must have execute permission.
+.IP "\fB-t \fITEMPLATE\fR"
+Use a language-scoped template for the created file.
+For example, \fB-l bash -t strict\fR searches for \fBbash/strict\fR.
+If \fBtemplate_dir\fR is configured, that directory is searched before the
+built-in templates.
+.IP "\fB-T\fR"
+Unset a configured \fBtemplate=\fITEMPLATE\fR option from \fB~/.exedrc\fR.
 .IP "\fB-o \fIOPTION\fR"
 Add an option after the interpreter line.
 For example, \fB-o -x\fR can be used with \fBbash\fR.
 .IP "\fB-I\fR"
 Write \fBIFS=$'\\n'\fR below the interpreter line.
-This option is accepted only with \fBbash\fR, \fBsh\fR, and \fBzsh\fR.
+This option is accepted only with \fBbash\fR and \fBzsh\fR.
 .IP "\fB-C\fR"
 Clobber.
 If the file exists, overwrite it without asking.
@@ -87,6 +94,8 @@ all_in_path=true
 editor=EDITOR
 verbose=true
 language=LANGUAGE
+template=NAME
+template_dir=DIR
 perms=MODE
 env=true
 clobber=true
@@ -102,6 +111,19 @@ The \fBeditor\fR value may include simple flags, such as
 Command-line flags override configuration values where an override exists.
 For example, \fB-N\fR unsets configured \fBenv=true\fR, and \fB-O\fR
 restores the interactive overwrite prompt.
+.SH TEMPLATES
+Templates are searched by language and name.
+With \fB-l bash -t strict\fR, \fBexed\fR looks for \fBbash/strict\fR; it does
+not search templates for other languages.
+If \fBtemplate_dir=DIR\fR is configured, \fBexed\fR checks
+\fBDIR/LANGUAGE/TEMPLATE\fR before the built-in
+\fBshare/exed/templates/LANGUAGE/TEMPLATE\fR, so personal templates can
+override the defaults.
+.PP
+Templates are plain text files.
+They may include \fB{{shebang}}\fR, \fB{{language}}\fR, and \fB{{file}}\fR.
+When \fB{{shebang}}\fR is omitted, \fBexed\fR prepends the interpreter line
+automatically.
 .SH SHELL INTEGRATION
 \fBexed\fR can be used as a standalone executable or through a sourceable shell
 plugin.
@@ -120,8 +142,9 @@ share/bash-completion/completions/exed
 .SH INSTALLATION
 The included \fBinstall.sh\fR script installs \fBexed\fR as a standalone
 executable.
-By default it symlinks the executable to \fB/usr/local/bin/exed\fR, the man page
-to \fB/usr/local/share/man/man1/exed.1\fR, and completion files below
+By default it symlinks the executable to \fB/usr/local/bin/exed\fR, templates to
+\fB/usr/local/share/exed/templates\fR, the man page to
+\fB/usr/local/share/man/man1/exed.1\fR, and completion files below
 \fB/usr/local/share\fR.
 Use \fBinstall.sh --user\fR for an installation under \fB$HOME/.local\fR, or
 \fBinstall.sh --prefix \fIDIR\fR to choose another prefix.

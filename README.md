@@ -17,11 +17,12 @@ cd exed
 ./install.sh
 ```
 
-By default, the installer symlinks the executable, man page, and completion
-files under `/usr/local`:
+By default, the installer symlinks the executable, templates, man page, and
+completion files under `/usr/local`:
 
 ```text
 /usr/local/bin/exed
+/usr/local/share/exed/templates
 /usr/local/share/man/man1/exed.1
 /usr/local/share/zsh/site-functions/_exed
 /usr/local/share/bash-completion/completions/exed
@@ -87,8 +88,8 @@ exed my_shell_script
 Create a new executable file:
 
 ```sh
-exed -c script
-exed -c -l ruby ruby_script
+exed -c my_script
+exed -c -l ruby my_ruby_script
 ```
 
 Useful options:
@@ -99,7 +100,9 @@ Useful options:
 - `-l LANGUAGE`: choose the language for a created file
 - `-m MODE`: choose permissions for a created file
 - `-n`: use `env` from `PATH` with `LANGUAGE` for a created file
-- `-I`: add `IFS=$'\n'` for created `bash`, `sh`, or `zsh` files
+- `-t TEMPLATE`: use a language-scoped template for a created file
+- `-T`: unset a configured `template=NAME`
+- `-I`: add `IFS=$'\n'` for created `bash` or `zsh` files
 - `-v`: print the executable location before opening it
 
 Interpreter lines are resolved from your current `PATH` by default. For example,
@@ -109,11 +112,26 @@ Interpreter lines are resolved from your current `PATH` by default. For example,
 
 Run `exed -h` to see all available options.
 
+Templates are searched by language and name. For example:
+
+```sh
+exed -c -l bash -t strict my_bash_script
+exed -c -l ruby -t cli my_ruby_script
+```
+
+With `-l bash -t strict`, `exed` looks for `bash/strict`; it does not search
+templates for other languages. If `template_dir=DIR` is configured, `exed`
+checks `DIR/LANGUAGE/TEMPLATE` before the built-in
+`share/exed/templates/LANGUAGE/TEMPLATE`, so personal templates can override
+the defaults. Templates are plain text files and may include `{{shebang}}`,
+`{{language}}`, and `{{file}}`. When `{{shebang}}` is omitted, `exed` prepends
+the interpreter line automatically.
+
 Editor values can include simple flags. For example:
 
 ```sh
-exed -e "code -w" my-script
-exed -e "vim -p" my-script
+exed -e "code -w" my_script
+exed -e "vim -p" my_script
 ```
 
 ## Environment Variables
@@ -133,6 +151,8 @@ a file in your home directory called `.exedrc`. Available variables:
 - `editor=EDITOR`
 - `verbose=true` (same as passing `-v`)
 - `language=LANGUAGE`
+- `template=NAME`
+- `template_dir=DIR`
 - `perms=MODE` (three-digit chmod-style permissions where the owner can execute,
   such as `755` or `700`)
 - `env=true` (same as passing `-n`)

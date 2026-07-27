@@ -51,6 +51,32 @@ install_one() {
     printf '%s\n' "Installed $dest"
 }
 
+install_tree() {
+    src=$1
+    dest=$2
+
+    mkdir -p "$(dirname "$dest")"
+
+    if [ -e "$dest" ] || [ -L "$dest" ]; then
+        if [ "$force" = false ]; then
+            printf '%s\n' "Refusing to replace existing file: $dest" >&2
+            printf '%s\n' "Re-run with --force to replace it." >&2
+            exit 1
+        fi
+        rm -rf "$dest"
+    fi
+
+    if [ "$copy" = true ]; then
+        mkdir -p "$dest"
+        cp -R "$src/." "$dest"
+        find "$dest" -type f -exec chmod 644 {} +
+    else
+        ln -s "$src" "$dest"
+    fi
+
+    printf '%s\n' "Installed $dest"
+}
+
 path_contains() {
     case ":$1:" in
         *":$2:"*) return 0 ;;
@@ -114,6 +140,7 @@ repo_dir=$(abspath_dir "$(dirname "$0")")
 prefix=$(mkdir -p "$prefix" && abspath_dir "$prefix")
 
 install_one "$repo_dir/bin/$PROGRAM" "$prefix/bin/$PROGRAM" 755
+install_tree "$repo_dir/share/$PROGRAM/templates" "$prefix/share/$PROGRAM/templates"
 
 if [ "$install_man" = true ]; then
     install_one "$repo_dir/man/man1/$PROGRAM.1" "$prefix/share/man/man1/$PROGRAM.1" 644

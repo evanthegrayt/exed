@@ -178,6 +178,7 @@ make_arg_recording_editor() {
 
     [ "$status" -eq 0 ]
     [ -L "$prefix/bin/exed" ]
+    [ -L "$prefix/share/exed/templates" ]
     [ -L "$prefix/share/man/man1/exed.1" ]
     [ -L "$prefix/share/zsh/site-functions/_exed" ]
     [ -L "$prefix/share/bash-completion/completions/exed" ]
@@ -192,6 +193,8 @@ make_arg_recording_editor() {
     [ -f "$prefix/bin/exed" ]
     [ ! -L "$prefix/bin/exed" ]
     [ "$(file_mode "$prefix/bin/exed")" = "755" ]
+    [ -f "$prefix/share/exed/templates/bash/strict" ]
+    [ "$(file_mode "$prefix/share/exed/templates/bash/strict")" = "644" ]
     [ -f "$prefix/share/man/man1/exed.1" ]
     [ "$(file_mode "$prefix/share/man/man1/exed.1")" = "644" ]
     [ -f "$prefix/share/zsh/site-functions/_exed" ]
@@ -233,6 +236,7 @@ make_arg_recording_editor() {
 
     [ "$status" -eq 0 ]
     [ -L "$prefix/bin/exed" ]
+    [ -L "$prefix/share/exed/templates" ]
     [ ! -e "$prefix/share/man/man1/exed.1" ]
     [ ! -e "$prefix/share/zsh/site-functions/_exed" ]
     [ ! -e "$prefix/share/bash-completion/completions/exed" ]
@@ -352,6 +356,73 @@ make_arg_recording_editor() {
     [ "$(line_at 1 "$file")" = "#!/tmp/not-real-interpreter" ]
 }
 
+@test "create mode renders a built-in language template" {
+    local file="$BATS_TEST_TMPDIR/strict-script"
+
+    run exed -e true -c -C -l bash -t strict "$file"
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$file")" = "#!$BASH_PATH" ]
+    [ "$(line_at 2 "$file")" = "set -euo pipefail" ]
+    [ "$(line_at 3 "$file")" = "IFS=\$'\\n\\t'" ]
+}
+
+@test "user templates override built-in templates for the same language and name" {
+    local file="$BATS_TEST_TMPDIR/user-strict-script"
+    local templates="$BATS_TEST_TMPDIR/templates"
+
+    mkdir -p "$templates/bash"
+    {
+        printf '%s\n' "{{shebang}}"
+        printf '%s\n' "echo user strict"
+    } > "$templates/bash/strict"
+    printf 'template_dir=%q\n' "$templates" > "$TEST_HOME/.exedrc"
+
+    run exed -e true -c -C -l bash -t strict "$file"
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$file")" = "#!$BASH_PATH" ]
+    [ "$(line_at 2 "$file")" = "echo user strict" ]
+}
+
+@test "templates without a shebang token get a prepended shebang" {
+    local file="$BATS_TEST_TMPDIR/prepended-script"
+    local templates="$BATS_TEST_TMPDIR/templates"
+
+    mkdir -p "$templates/bash"
+    printf '%s\n' 'echo "{{language}} {{file}}"' > "$templates/bash/body"
+    printf 'template_dir=%q\n' "$templates" > "$TEST_HOME/.exedrc"
+
+    run exed -e true -c -C -l bash -t body "$file"
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$file")" = "#!$BASH_PATH" ]
+    [ "$(line_at 2 "$file")" = "" ]
+    [ "$(line_at 3 "$file")" = "echo \"bash $file\"" ]
+}
+
+@test "templates are language-scoped and missing templates fail" {
+    local file="$BATS_TEST_TMPDIR/missing-template-script"
+
+    run exed -e true -c -C -l bash -t cli "$file"
+
+    [ "$status" -eq 1 ]
+    [[ $output == *"Template [cli] for language [bash] was not found."* ]]
+    [ ! -e "$file" ]
+}
+
+@test "configured templates can be unset at runtime" {
+    local file="$BATS_TEST_TMPDIR/unset-template-script"
+
+    printf '%s\n' "template=strict" > "$TEST_HOME/.exedrc"
+
+    run exed -e true -c -C -l bash -T "$file"
+
+    [ "$status" -eq 0 ]
+    [ "$(line_at 1 "$file")" = "#!$BASH_PATH" ]
+    [ "$(line_at 2 "$file")" = "" ]
+}
+
 @test "IFS line is written only for compatible shells" {
     local file="$BATS_TEST_TMPDIR/ifs-script"
 
@@ -359,6 +430,11 @@ make_arg_recording_editor() {
 
     [ "$status" -eq 0 ]
     [ "$(line_at 2 "$file")" = "IFS=\$'\\n'" ]
+
+    run exed -e true -c -C -I -l sh "$file"
+
+    [ "$status" -eq 1 ]
+    [[ $output == *"'-I' is only compatible with bash and zsh"* ]]
 }
 
 @test "IFS validation runs before interpreter resolution" {
@@ -367,7 +443,7 @@ make_arg_recording_editor() {
     run exed -e true -c -I -l fish "$file"
 
     [ "$status" -eq 1 ]
-    [[ $output == *"'-I' is only compatible with bash, sh, and zsh"* ]]
+    [[ $output == *"'-I' is only compatible with bash and zsh"* ]]
     [[ $output != *"[fish] is not supported"* ]]
 }
 

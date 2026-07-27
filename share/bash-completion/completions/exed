@@ -45,7 +45,7 @@ _exed_complete_word_consumes_next_arg() {
         options=${options#?}
 
         case $option in
-            e|i|l|m|o)
+            e|i|l|m|o|t)
                 [[ -z $options ]] && return 0
                 return 1
                 ;;
@@ -121,7 +121,7 @@ _exed_complete() {
     COMPREPLY=()
     cur=${COMP_WORDS[COMP_CWORD]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
-    options="-a -B -c -C -e -h -i -I -l -m -n -N -o -O -u -v -V"
+    options="-a -B -c -C -e -h -i -I -l -m -n -N -o -O -t -T -u -v -V"
 
     case $prev in
         -e)
@@ -141,6 +141,10 @@ _exed_complete() {
             return 0
             ;;
         -o)
+            return 0
+            ;;
+        -t)
+            _exed_complete_compgen word "$cur" "default strict portable cli"
             return 0
             ;;
     esac
