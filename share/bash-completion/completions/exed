@@ -121,7 +121,7 @@ _exed_complete() {
     COMPREPLY=()
     cur=${COMP_WORDS[COMP_CWORD]}
     prev=${COMP_WORDS[COMP_CWORD-1]}
-    options="-a -B -c -C -e -h -i -I -l -m -n -N -o -O -t -T -u -v -V"
+    options="-a -B -c -C -e -h -i -I -l -m -n -N -o -O -t -T -v -V"
 
     case $prev in
         -e)

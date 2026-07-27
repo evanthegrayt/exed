@@ -31,7 +31,6 @@ _exed() {
     '-O[prompt before overwriting in create mode]' \
     '-t+[use language-scoped template for created files]:template:(default strict portable cli)' \
     '-T[unset configured template option]' \
-    '-u[print usage and exit]' \
     '-v[print editor and file location before opening]' \
     '-V[print version and exit]' \
     ':executable name:->target' && return
