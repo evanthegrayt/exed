@@ -1,9 +1,12 @@
 # Executable Editor
-`exed` opens executable scripts in your editor.
+In short, `exed FILE` finds `FILE` in your path and opens it in your editor.
 
-By default, it finds an existing executable in your `PATH` and opens it. With
-`-c`, it creates a new executable file, writes an interpreter line, applies
-executable permissions, and opens the file in your editor.
+With `exed -c -l LANGUAGE -m PERMS FILE`, it creates a new executable `FILE`,
+writes an interpreter line for `LANGUAGE` at the top, applies executable `PERMS`
+via `chmod`, and opens the file in your editor. Defaults can be set, so creating
+can be as simple as `exed -c FILE`.
+
+More details in the [usage](#usage) section, or run with `-h`.
 
 ## Installation
 Clone the repository, `cd` into the base directory, and run the installer:
