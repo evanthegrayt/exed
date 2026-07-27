@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Author:   Evan Gray
-# Version:  0.1.0
+# Version:  0.2.0
 
 readonly PROGRAM=${BASH_SOURCE[0]##*/}
-readonly VERSION="$PROGRAM 0.1.0 (July 2026)"
+readonly VERSION="$PROGRAM 0.2.0 (July 2026)"
 readonly USAGE="USAGE: $PROGRAM [OPTIONS...] EXECUTABLE_NAME"
 readonly DEFAULT_LANGUAGE=bash
 readonly DEFAULT_PERMS=755
@@ -25,7 +25,9 @@ reset_runtime_state() {
     INTERPRETER=
     INTERPRETER_OPTION=
     LANGUAGE=
+    LIST_TEMPLATES=false
     PERMS=
+    PREVIEW_TEMPLATE=false
     TEMPLATE=
     TEMPLATE_DIR=
     TEMPLATE_FILE=
@@ -55,6 +57,8 @@ print_help() {
                         + owner must have execute permission
     -t TEMPLATE         | use language-scoped template for created files
     -T                  | unset configured template option
+    -L                  | list available templates and exit
+    -P                  | preview selected template and exit
     -o OPTION           | add OPTION after the interpreter line
     -I                  | set Internal Field Separator (IFS) in bash and zsh
     -C                  | clobber existing files in create mode
@@ -184,6 +188,79 @@ find_template() {
     fi
 
     abort "Template [$template] for language [$language] was not found."
+}
+
+collect_templates_from_dir() {
+    local template_dir=$1
+    local language
+    local language_dir
+    local template
+    local template_file
+
+    [[ -d $template_dir ]] || return 0
+
+    for language_dir in "$template_dir"/*; do
+        [[ -d $language_dir ]] || continue
+        language=${language_dir##*/}
+        validate_template_segment "Language" "$language"
+
+        for template_file in "$language_dir"/*; do
+            [[ -f $template_file ]] || continue
+            template=${template_file##*/}
+            validate_template_segment "Template" "$template"
+            printf '%s/%s\n' "$language" "$template"
+        done
+    done
+}
+
+collect_templates() {
+    local built_in_dir
+
+    if [[ -n ${TEMPLATE_DIR:-} ]]; then
+        [[ -d $TEMPLATE_DIR ]] || abort "Template directory [$TEMPLATE_DIR] does not exist."
+        collect_templates_from_dir "$TEMPLATE_DIR"
+    fi
+
+    built_in_dir=$(built_in_template_dir) || abort "Could not resolve built-in template directory."
+    collect_templates_from_dir "$built_in_dir"
+}
+
+list_templates() {
+    local requested_language=${LANGUAGE:-}
+    local current_language=
+    local found=false
+    local language
+    local template
+
+    if [[ -n $requested_language ]]; then
+        validate_template_segment "Language" "$requested_language"
+    fi
+
+    while IFS=/ read -r language template; do
+        [[ -n $language && -n $template ]] || continue
+        if [[ -n $requested_language && $language != "$requested_language" ]]; then
+            continue
+        fi
+
+        if [[ $language != "$current_language" ]]; then
+            if [[ -n $current_language ]]; then
+                printf '\n'
+            fi
+            printf '%s:\n' "$language"
+            current_language=$language
+        fi
+
+        printf '  %s\n' "$template"
+        found=true
+    done < <(collect_templates | sort -u)
+
+    if ! is_true "$found"; then
+        if [[ -n $requested_language ]]; then
+            printf 'No templates found for language [%s].\n' "$requested_language"
+        else
+            printf 'No templates found.\n'
+        fi
+    fi
 }
 
 template_has_shebang_token() {
@@ -425,7 +502,7 @@ parse_args() {
     local opt
 
     OPTIND=1
-    while getopts ":aBcCe:hi:Il:m:nNo:Ot:TuvV" opt; do
+    while getopts ":aBcCe:hi:Il:Lm:nNo:OPt:TuvV" opt; do
         case $opt in
             a)
                 ALL_IN_PATH=true
@@ -461,6 +538,9 @@ parse_args() {
                 LANGUAGE=$OPTARG
                 mark_create_option
                 ;;
+            L)
+                LIST_TEMPLATES=true
+                ;;
             m)
                 PERMS=$OPTARG
                 validate_permissions "$PERMS"
@@ -484,6 +564,10 @@ parse_args() {
                 ;;
             O)
                 CLOBBER_MODE=interactive
+                mark_create_option
+                ;;
+            P)
+                PREVIEW_TEMPLATE=true
                 mark_create_option
                 ;;
             t)
@@ -511,17 +595,33 @@ parse_args() {
     done
     shift "$(( OPTIND - 1 ))"
 
+    if is_true "$LIST_TEMPLATES"; then
+        [[ $# -eq 0 ]] || abort "$USAGE"
+        return 0
+    fi
+
+    if is_true "$PREVIEW_TEMPLATE"; then
+        [[ $# -le 1 ]] || abort "$USAGE"
+        EXECUTABLE=${1:-exed-preview}
+        return 0
+    fi
+
     [[ $# -eq 1 ]] || abort "$USAGE"
 
     EXECUTABLE=$1
 }
 
 validate_args() {
+    if is_true "$LIST_TEMPLATES" && is_true "$PREVIEW_TEMPLATE"; then
+        abort "-L cannot be used with -P."
+    fi
+
     if is_true "$CREATE" && is_true "$ALL_IN_PATH"; then
         abort "-a cannot be used with -c."
     fi
 
-    if ! is_true "$CREATE" && is_true "$CREATE_OPTION_USED"; then
+    if ! is_true "$CREATE" && ! is_true "$LIST_TEMPLATES" && ! is_true "$PREVIEW_TEMPLATE" && \
+        is_true "$CREATE_OPTION_USED"; then
         abort "Creation options can only be used with -c."
     fi
 }
@@ -563,6 +663,20 @@ run_create() {
     open_editor "$EDITOR_CMD" "$FILE"
 }
 
+run_preview() {
+    prepare_create
+
+    if [[ -z ${TEMPLATE_FILE:-} ]]; then
+        abort "No template selected to preview."
+    fi
+
+    if is_true "$CREATE"; then
+        printf '%s\n' "Preview mode: file not created." >&2
+    fi
+
+    render_template "$TEMPLATE_FILE" "$FILE"
+}
+
 run_find() {
     find_executables "$EXECUTABLE" "$ALL_IN_PATH"
     choose_executable
@@ -575,6 +689,16 @@ run_find() {
 }
 
 run() {
+    if is_true "$LIST_TEMPLATES"; then
+        list_templates
+        return 0
+    fi
+
+    if is_true "$PREVIEW_TEMPLATE"; then
+        run_preview
+        return 0
+    fi
+
     prepare_editor
 
     if is_true "$CREATE"; then

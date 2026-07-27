@@ -134,6 +134,57 @@ make_arg_recording_editor() {
     [[ $output == *"$target"* ]]
 }
 
+@test "bash completion scopes template names by selected language" {
+    local templates="$BATS_TEST_TMPDIR/templates"
+
+    mkdir -p "$templates/bash" "$templates/python"
+    printf '%s\n' "echo user" > "$templates/bash/user"
+    printf '%s\n' "print('user')" > "$templates/python/userpy"
+    printf 'template_dir=%q\n' "$templates" > "$TEST_HOME/.exedrc"
+
+    run bash --noprofile --norc -c '
+        source "$1"
+        HOME="$2"
+        PATH="$3/bin:$PATH"
+        COMP_WORDS=(exed -c -l bash -t "")
+        COMP_CWORD=5
+        _exed_complete
+        printf "%s\n" "${COMPREPLY[@]}"
+    ' _ "$REPO_ROOT/share/bash-completion/completions/exed" "$TEST_HOME" "$REPO_ROOT"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"strict"* ]]
+    [[ $output == *"user"* ]]
+    [[ $output != *"cli"* ]]
+    [[ $output != *"userpy"* ]]
+}
+
+@test "zsh completion scopes template names by selected language" {
+    command -v zsh >/dev/null 2>&1 || skip "zsh is not installed"
+
+    local templates="$BATS_TEST_TMPDIR/templates"
+
+    mkdir -p "$templates/bash" "$templates/python"
+    printf '%s\n' "echo user" > "$templates/bash/user"
+    printf '%s\n' "print('user')" > "$templates/python/userpy"
+    printf 'template_dir=%q\n' "$templates" > "$TEST_HOME/.exedrc"
+
+    run zsh -f -c '
+        source "$1" >/dev/null 2>&1 || true
+        HOME="$2"
+        PATH="$3/bin:$PATH"
+        typeset -A opt_args
+        opt_args=(-l bash)
+        _exed_template_words
+    ' _ "$REPO_ROOT/share/zsh/site-functions/_exed" "$TEST_HOME" "$REPO_ROOT"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"strict"* ]]
+    [[ $output == *"user"* ]]
+    [[ $output != *"cli"* ]]
+    [[ $output != *"userpy"* ]]
+}
+
 @test "zsh plugin exposes executable and completion" {
     command -v zsh >/dev/null 2>&1 || skip "zsh is not installed"
 
@@ -411,6 +462,77 @@ make_arg_recording_editor() {
     [ ! -e "$file" ]
 }
 
+@test "templates can be listed across built-ins and configured user templates" {
+    local templates="$BATS_TEST_TMPDIR/templates"
+
+    mkdir -p "$templates/bash" "$templates/fish"
+    printf '%s\n' "echo user strict" > "$templates/bash/strict"
+    printf '%s\n' "echo swim" > "$templates/fish/default"
+    printf 'template_dir=%q\n' "$templates" > "$TEST_HOME/.exedrc"
+
+    run exed -L
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"bash:"* ]]
+    [[ $output == *"  strict"* ]]
+    [[ $output == *"fish:"* ]]
+    [[ $output == *"  default"* ]]
+    [[ $output != *"awk:"* ]]
+}
+
+@test "template listing can be scoped by language" {
+    run exed -l python -L
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"python:"* ]]
+    [[ $output == *"  cli"* ]]
+    [[ $output != *"bash:"* ]]
+}
+
+@test "selected templates can be previewed without creating a file" {
+    local file="$BATS_TEST_TMPDIR/preview-script"
+
+    run exed -l bash -t strict -P "$file"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"#!$BASH_PATH"* ]]
+    [[ $output == *"set -euo pipefail"* ]]
+    [[ $output == *"IFS=\$'\\n\\t'"* ]]
+    [ ! -e "$file" ]
+}
+
+@test "preview mode can be added to create mode without creating a file" {
+    local file="$BATS_TEST_TMPDIR/create-preview-script"
+
+    run exed -e false -c -C -l bash -t strict -P "$file"
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"Preview mode: file not created."* ]]
+    [[ $output == *"set -euo pipefail"* ]]
+    [ ! -e "$file" ]
+}
+
+@test "configured templates can be previewed and unset for previews" {
+    printf '%s\n' "template=strict" > "$TEST_HOME/.exedrc"
+
+    run exed -l bash -P
+
+    [ "$status" -eq 0 ]
+    [[ $output == *"set -euo pipefail"* ]]
+
+    run exed -l bash -T -P
+
+    [ "$status" -eq 1 ]
+    [[ $output == *"No template selected to preview."* ]]
+}
+
+@test "list and preview modes cannot be combined" {
+    run exed -L -P
+
+    [ "$status" -eq 1 ]
+    [[ $output == *"-L cannot be used with -P."* ]]
+}
+
 @test "configured templates can be unset at runtime" {
     local file="$BATS_TEST_TMPDIR/unset-template-script"
 
@@ -456,6 +578,11 @@ make_arg_recording_editor() {
 
 @test "all matches cannot be used with create mode" {
     run exed -e true -a -c script
+
+    [ "$status" -eq 1 ]
+    [[ $output == *"-a cannot be used with -c."* ]]
+
+    run exed -a -c -l bash -t strict -P script
 
     [ "$status" -eq 1 ]
     [[ $output == *"-a cannot be used with -c."* ]]
