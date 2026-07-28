@@ -1,4 +1,10 @@
 # Executable Editor
+[![Language: Bash](https://img.shields.io/static/v1?label=language&message=Bash&color=4EAA25&style=flat&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Shell plugins: zsh | bash](https://img.shields.io/static/v1?label=shell%20plugins&message=zsh%20%7C%20bash&color=4EAA25&style=flat&logo=gnubash&logoColor=white)](#shell-plugins)
+[![Completions: zsh | bash](https://img.shields.io/static/v1?label=completions&message=zsh%20%7C%20bash&color=4EAA25&style=flat&logo=shell&logoColor=white)](#completion)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fevanthegrayt%2Fexed%2Fbadge%3Fref%3Dmaster&style=flat)](https://actions-badge.atrox.dev/evanthegrayt/exed/goto?ref=master)
+
 In short, `exed FILE` finds `FILE` in your path and opens it in your editor.
 
 With `exed -c -l LANGUAGE -m PERMS FILE`, it creates `FILE`, writes an
