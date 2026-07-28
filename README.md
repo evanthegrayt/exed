@@ -1,12 +1,15 @@
 # Executable Editor
 In short, `exed FILE` finds `FILE` in your path and opens it in your editor.
 
-With `exed -c -l LANGUAGE -m PERMS FILE`, it creates a new executable `FILE`,
-writes an interpreter line for `LANGUAGE` at the top, applies executable `PERMS`
-via `chmod`, and opens the file in your editor. Defaults can be set, so creating
-can be as simple as `exed -c FILE`.
+With `exed -c -l LANGUAGE -m PERMS FILE`, it creates `FILE`, writes an
+interpreter line for `LANGUAGE` at the top, applies executable `PERMS` via
+`chmod`, and opens the file in your editor. Users can create templates for
+generated scripts and can be specified at runtime.
 
-More details in the [usage](#usage) section, or run with `-h`.
+Defaults can be set, so creating a script can be as simple as `exed -c FILE`.
+
+More details are in the [usage](#usage) section of this file. After installing, view
+help with `-h` or the manual with `man exed`.
 
 ## Installation
 Clone the repository, `cd` into the base directory, and run the installer:
